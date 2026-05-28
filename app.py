@@ -142,12 +142,12 @@ with st.expander(t("quality_expander", lang)):
     for r in canton.regions:
         st.caption(
             f"R{r.region_id} ({r.region_name_de}): "
-            f"{r.quality.overall} — coverage {r.quality.coverage_pct:.0%}"
+            f"{r.quality.overall} — {t('coverage', lang)} {r.quality.coverage_pct:.0%}"
         )
 
 # ── Export buttons ─────────────────────────────────────────────────────────
 with export_placeholder:
-    html_str = to_html(doc, canton)
+    html_str = to_html(doc, canton, rs)
     st.download_button(
         label=t("btn_html", lang),
         data=html_str.encode("utf-8"),
