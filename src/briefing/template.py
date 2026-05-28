@@ -4,13 +4,7 @@ from __future__ import annotations
 import math
 from datetime import datetime
 
-from config.settings import CDI_LABELS
-from src.briefing.text_blocks import (
-    DATENGRUNDLAGE_BLOCKS,
-    ENTWICKLUNG_BLOCKS,
-    EINORDNUNG_BLOCKS,
-    LAGE_BLOCKS,
-)
+from src.briefing import text_blocks_de
 from src.models import BriefingDocument, RegionReport
 
 
@@ -26,6 +20,7 @@ _TREND_LABELS: dict[int, dict[str, str]] = {
 
 
 def _format_kwargs(report: RegionReport, mode: str) -> dict:
+    from config.settings import CDI_LABELS
     return {
         "region":            report.region_name_de,
         "cdi":               report.cdi,
@@ -49,10 +44,10 @@ def build_briefing(report: RegionReport, mode: str) -> BriefingDocument:
     cdi = min(max(report.cdi, 0), 5)
     fmt = _format_kwargs(report, mode)
     sections = {
-        "lage":           LAGE_BLOCKS[mode][cdi].format(**fmt),
-        "entwicklung":    ENTWICKLUNG_BLOCKS[mode][cdi].format(**fmt),
-        "einordnung":     EINORDNUNG_BLOCKS[mode][cdi].format(**fmt),
-        "datengrundlage": DATENGRUNDLAGE_BLOCKS[mode].format(**fmt),
+        "lage":           text_blocks_de.LAGE_BLOCKS[mode][cdi].format(**fmt),
+        "entwicklung":    text_blocks_de.ENTWICKLUNG_BLOCKS[mode][cdi].format(**fmt),
+        "einordnung":     text_blocks_de.EINORDNUNG_BLOCKS[mode][cdi].format(**fmt),
+        "datengrundlage": text_blocks_de.DATENGRUNDLAGE_BLOCKS[mode].format(**fmt),
     }
     return BriefingDocument(
         sections=sections,
@@ -60,8 +55,3 @@ def build_briefing(report: RegionReport, mode: str) -> BriefingDocument:
         mode=mode,
         generated_at=datetime.now(),
     )
-
-
-def translate(text: str, lang: str = "de") -> str:
-    """FR/IT translation stub — returns German text unchanged."""
-    return text

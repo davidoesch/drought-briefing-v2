@@ -1,4 +1,4 @@
-# src/briefing/text_blocks.py
+# src/briefing/text_blocks_de.py
 """
 Rule-based text blocks keyed by mode and CDI level.
 All slots are filled strictly from RegionReport values — no invented facts.
