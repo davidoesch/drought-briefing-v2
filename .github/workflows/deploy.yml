@@ -3,6 +3,7 @@ name: Deploy to GitHub Pages
 on:
   push:
     branches: [main]
+  workflow_dispatch: 
 
 permissions:
   contents: read
@@ -25,12 +26,14 @@ jobs:
       - name: Assemble static site
         run: |
           mkdir -p _site
-          cp docs/index.html _site/
-          cp app.py _site/
-          cp -r config _site/config
-          cp -r src _site/src
-          cp -r data _site/data
-          find _site -name __pycache__ -type d -exec rm -rf {} + 2>/dev/null || true
+          # Sync all application files, stripping out repo metadata and dev environments
+          rsync -arv --exclude='.git/' --exclude='.github/' --exclude='.venv/' --exclude='tests/' --exclude='scripts/' --exclude='stac_data/' ./ _site/
+          
+          # Move the stlite bootstrapper to the root directory for serving
+          mv _site/docs/index.html _site/index.html
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v5
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
