@@ -82,29 +82,36 @@ canton = compute_canton_report(
 )
 doc = render_briefing(canton, _ruleset(), locale=lang)
 
-# ── Header ─────────────────────────────────────────────────────────────────
-# NOTE: transient broken state — header + sections migrated in Tasks 8.3 + 8.4
-col_title, col_badge = st.columns([4, 1])
-with col_title:
-    st.title(t("briefing_title", lang))
-    st.caption(
-        f"Kanton {canton.canton_name_de} · "
-        f"{t('stand', lang)}: {canton.data_timestamp.strftime('%d.%m.%Y')} · "
-        f"{t('source', lang)}: {canton.source}"
-    )
-with col_badge:
-    st.markdown(
-        f"""<div style="border-radius:10px;padding:12px;text-align:center;background:#888;">
-        <div style="font-size:11px;color:rgba(255,255,255,0.8);">Stufe</div>
-        <div style="font-size:36px;font-weight:bold;color:white;">{canton.max_warnlevel}</div>
-        </div>""",
-        unsafe_allow_html=True,
-    )
+# ── Header / Lead box ──────────────────────────────────────────────────────
+def _warnstufe_colour(level: int) -> str:
+    palette = {1: "#6bbd50", 2: "#f7e84c", 3: "#ff8c00", 4: "#e02020", 5: "#8b0000"}
+    return palette.get(level, "#cccccc")
+
+
+canton_label = canton.canton_name_de if lang == "de" else canton.canton_name_fr
+st.title(f"Trockenheitsbriefing {canton_label}")
+st.markdown(
+    f"""<div style="background:{_warnstufe_colour(canton.max_warnlevel)};border-radius:8px;padding:18px;color:#fff;">
+    <div style="font-size:11px;opacity:.85;">{('Aktuelle Warnstufe' if lang == 'de' else 'Niveau actuel')}</div>
+    <div style="font-size:28px;font-weight:700;">{doc.lead_headline}</div>
+    <div style="font-size:12px;opacity:.85;">{doc.lead_meta}</div>
+    </div>""",
+    unsafe_allow_html=True,
+)
 
 st.divider()
 
-# ── Text sections (transient — replaced in Task 8.4) ──────────────────────
+# ── Two side-by-side maps ──────────────────────────────────────────────────
+map_cols = st.columns(2)
+for col, map_spec in zip(map_cols, doc.lead_maps):
+    with col:
+        st.subheader(map_spec.title_de if lang == "de" else map_spec.title_fr)
+        m = build_canton_map(canton, map_spec)
+        st.components.v1.html(m._repr_html_(), height=300)
+
 st.divider()
+
+# ── Text sections (replaced in Task 8.4) ──────────────────────────────────
 for section_key in ["lage", "entwicklung", "einordnung"]:
     sec_text = doc.sections.get(section_key, "")
     if sec_text:
