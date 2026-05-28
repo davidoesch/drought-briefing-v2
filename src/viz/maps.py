@@ -22,7 +22,7 @@ def build_map(
     m = folium.Map(
         location=[46.80, 7.55],
         zoom_start=9,
-        tiles="CartoDB dark_matter",
+        tiles="CartoDB positron",
     )
 
     def style_fn(feature):
@@ -33,7 +33,7 @@ def build_map(
             "fillColor": CDI_COLOURS.get(cdi, "#cccccc"),
             "color": "#ffffff" if is_selected else "#888888",
             "weight": 3 if is_selected else 1,
-            "fillOpacity": 0.75,
+            "fillOpacity": 0.5,
         }
 
     folium.GeoJson(
