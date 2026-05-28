@@ -37,6 +37,18 @@ def _ruleset():
     return load_ruleset(Path("data/ruleset/canton-bulletin.yaml"))
 
 
+def _warnstufe_palette(level: int) -> tuple[str, str]:
+    """Return (background, text) colour pair for a warning level (1–5)."""
+    palette = {
+        1: ("#6bbd50", "#ffffff"),
+        2: ("#f7e84c", "#1a1a1a"),
+        3: ("#ff8c00", "#ffffff"),
+        4: ("#e02020", "#ffffff"),
+        5: ("#8b0000", "#ffffff"),
+    }
+    return palette.get(level, ("#cccccc", "#1a1a1a"))
+
+
 # ── Sidebar ────────────────────────────────────────────────────────────────
 with st.sidebar:
     st.title("💧 Trockenheitsbriefing")
@@ -53,7 +65,7 @@ with st.sidebar:
 
     canton_options = sorted(CANTON_TO_REGIONS.keys())
     selected_canton_id = st.selectbox(
-        "Kanton",
+        t("canton_label", lang),
         options=canton_options,
         format_func=lambda cid: CANTON_NAMES[cid].get(lang, CANTON_NAMES[cid]["de"]),
         index=0,
@@ -78,19 +90,16 @@ canton = compute_canton_report(
     bundle=bundle,
     warnkarte_data=warnkarte,
 )
-doc = render_briefing(canton, _ruleset(), locale=lang)
+rs = _ruleset()
+doc = render_briefing(canton, rs, locale=lang)
 
 # ── Header / Lead box ──────────────────────────────────────────────────────
-def _warnstufe_colour(level: int) -> str:
-    palette = {1: "#6bbd50", 2: "#f7e84c", 3: "#ff8c00", 4: "#e02020", 5: "#8b0000"}
-    return palette.get(level, "#cccccc")
-
-
 canton_label = canton.canton_name_de if lang == "de" else canton.canton_name_fr
 st.title(f"Trockenheitsbriefing {canton_label}")
+bg, text_colour = _warnstufe_palette(canton.max_warnlevel)
 st.markdown(
-    f"""<div style="background:{_warnstufe_colour(canton.max_warnlevel)};border-radius:8px;padding:18px;color:#fff;">
-    <div style="font-size:11px;opacity:.85;">{('Aktuelle Warnstufe' if lang == 'de' else 'Niveau actuel')}</div>
+    f"""<div style="background:{bg};border-radius:8px;padding:18px;color:{text_colour};">
+    <div style="font-size:11px;opacity:.85;">{t("current_warnlevel", lang)}</div>
     <div style="font-size:28px;font-weight:700;">{doc.lead_headline}</div>
     <div style="font-size:12px;opacity:.85;">{doc.lead_meta}</div>
     </div>""",
@@ -110,7 +119,7 @@ for col, map_spec in zip(map_cols, doc.lead_maps):
 st.divider()
 
 # ── Text sections ──────────────────────────────────────────────────────────
-for sec in _ruleset().sections:
+for sec in rs.sections:
     title = sec.title.get(lang, sec.title.get("de", sec.id))
     st.markdown(f"## {title}")
     st.markdown(doc.sections[sec.id])
@@ -133,6 +142,8 @@ with st.expander(t("quality_expander", lang)):
 # ── Export buttons ─────────────────────────────────────────────────────────
 with export_placeholder:
     if False:  # disabled until Phase 8b rewrites to_html for CantonReport
+        # TODO(Phase 8b): to_html needs to be rewritten to accept CantonReport.
+        # Do NOT remove the `if False:` guard above without first updating to_html.
         html_str = to_html(doc, canton)
         st.download_button(
             label=t("btn_html", lang),
