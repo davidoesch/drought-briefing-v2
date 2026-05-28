@@ -47,3 +47,38 @@ def test_compute_canton_report_basic():
     assert canton.max_warnlevel_info_de == "Grosse Gefahr"
     # All region IDs appear
     assert {r.region_id for r in canton.regions} == {33, 34, 35, 37, 38, 41}
+
+
+from src.aggregation.canton import _fold_quality
+from src.models import QualityReport
+
+
+def _q(overall: str, age: int = 1, coverage: float = 1.0) -> QualityReport:
+    return QualityReport(
+        data_age_days=age,
+        coverage_pct=coverage,
+        missing_columns=[],
+        outlier_flags=[],
+        is_stale=age > 14,
+        overall=overall,
+    )
+
+
+def test_fold_quality_worst_wins():
+    folded = _fold_quality([_q("ok"), _q("warning"), _q("ok")])
+    assert folded.overall == "warning"
+
+
+def test_fold_quality_error_dominates():
+    folded = _fold_quality([_q("ok"), _q("error"), _q("warning")])
+    assert folded.overall == "error"
+
+
+def test_fold_quality_max_age():
+    folded = _fold_quality([_q("ok", age=3), _q("ok", age=10), _q("ok", age=2)])
+    assert folded.data_age_days == 10
+
+
+def test_fold_quality_mean_coverage():
+    folded = _fold_quality([_q("ok", coverage=0.6), _q("ok", coverage=1.0)])
+    assert folded.coverage_pct == 0.8
