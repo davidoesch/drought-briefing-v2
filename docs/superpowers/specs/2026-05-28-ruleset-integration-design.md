@@ -1,14 +1,14 @@
 # Ruleset integration & canton restructure — design
 
 **Date:** 2026-05-28
-**Status:** Draft — pending user review
+**Status:** Draft — pending user review (rebased onto updated `main` after the FR-language work merged)
 **Scope:** Single implementation plan (one feature branch)
 
 ## Context
 
 The repository has two parallel paths for producing the drought briefing:
 
-1. **Production codepath** (on `main`) — Streamlit app, per-warning-region, two tonal modes (`behoerden` / `bulletin`), text blocks hard-coded in `src/briefing/text_blocks.py`, trend computed as current vs. prior week. Bern-only.
+1. **Production codepath** (on `main`) — Streamlit app, per-warning-region, two tonal modes (`behoerden` / `bulletin`), text blocks hard-coded in `src/briefing/text_blocks_de.py` plus a French sibling `text_blocks_fr.py` (added by the parallel FR-language workstream — see [Relation to other work](#relation-to-other-work)). Trend computed as current vs. prior week. Bern-only. STAC client is live (fetches from `data.geo.admin.ch` with transparent fixture fallback). A `src/i18n/strings.py` module exposes a `t(key, lang)` function for UI chrome strings (sidebar labels, buttons, metric titles).
 2. **Ruleset YAML** (`data/ruleset/example-report.yaml`, merged in PR #1) — declarative, BAFU/MeteoSchweiz terminology, single narrative style, trend computed as forecast vs. current, live BAFU Warnkarte API as the source of truth for the warning level.
 
 The YAML was developed standalone. It is not wired into the app. Today the production code hard-codes content that the YAML now declares (terminology, recommendations, trend phrasing). Two parallel implementations is the worst possible state.
@@ -56,11 +56,14 @@ WarnkarteData ┘     │
 | `DataBundle` | unchanged | — |
 | `RegionReport` | retained, extended | New fields for the per-region section: `precip_sum_1m`, `precip_sum_3m`, `precip_1m_index`, `soil_moisture_index`, `warnlevel`, `warnlevel_info_de`, `cdi_forecast_week2` |
 | `BriefingDocument` | retained, extended | `sections: dict[str, str]` keys become `lead`, `allgemeine_lage`, `handlungsoptionen`, `regionen`, `datenquellen` (Markdown). New attribute `lead_maps: list[MapSpec]` holds the structured map specs from the YAML lead block — kept separate from `sections` so the Markdown dict stays a flat string-to-string mapping. |
-| `text_blocks.py` | **deleted** | YAML ruleset + Jinja2 renderer |
-| `template.py::build_briefing()` | **rewritten** | Loads ruleset, builds `CantonReport`, renders Jinja2 templates from YAML |
+| `src/data/stac_client.py` | unchanged | Already does live STAC fetch with transparent fixture fallback. The `warnkarte_client` adopts the same `try fetch / except: fixture` pattern. |
+| `src/i18n/strings.py` | unchanged | UI chrome strings (sidebar, buttons, metric titles, quality panel) stay here. YAML handles report content; i18n stays the source for everything not in the report body. |
+| `text_blocks_de.py` + `text_blocks_fr.py` | **both deleted** | Report content (DE and FR) moves into the YAML ruleset (`nomenclature` + `sections.template`). FR content is currently stub-y in the YAML and gets filled out as part of step 4. |
+| `template.py::build_briefing(report, mode, lang)` | **rewritten** | New `render_briefing(canton_report, ruleset, locale)`. `lang` becomes `locale` to align with the YAML's de/fr/it scheme. |
 | `_TREND_LABELS` (in `template.py`) | **deleted** | Trend term comes from `trend.defizit` in the YAML |
 | Sidebar mode radio | **removed** | Single narrative style |
 | Sidebar region selector | becomes **canton selector** | Bern initially, canton-agnostic |
+| Sidebar language toggle | unchanged | Stays as is. `t()` is used for chrome; `render_briefing(..., locale=lang)` flows the selected language into the YAML render. |
 
 ### New components
 
@@ -276,14 +279,18 @@ src/
     __init__.py
     renderer.py            ← NEW (replaces template.py)
     schemas.py             ← NEW (Pydantic models)
+    text_blocks_de.py      ← DELETED
+    text_blocks_fr.py      ← DELETED
   data/
-    stac_client.py         (unchanged, still a stub)
+    stac_client.py         (unchanged, live STAC fetch with fixture fallback)
     fixture_loader.py      (unchanged)
-    warnkarte_client.py    ← NEW (HTTP + fixture fallback)
+    warnkarte_client.py    ← NEW (HTTP + fixture fallback, mirrors stac_client pattern)
   aggregation/
     regional.py            (RegionReport gains new fields)
     canton.py              ← NEW (compute_canton_report)
     indicators.py          (unchanged)
+  i18n/
+    strings.py             (unchanged, UI chrome strings)
   models.py                (+ CantonReport, WarnkarteEntry, MapSpec)
 data/
   ruleset/
@@ -298,7 +305,9 @@ data/
 | `tests/test_renderer.py` | NEW | Snapshot test of rendered sections for a fixed `CantonReport`; edge cases (missing forecast, max_warnlevel = 1 vs. 4, etc.) |
 | `tests/test_warnkarte_client.py` | NEW | Mocked HTTP responses + fixture-fallback path |
 | `tests/test_canton.py` | NEW | `compute_canton_report` with region aggregates |
-| `tests/test_text_blocks.py` | DELETED | Module gone |
+| `tests/test_text_blocks.py` | DELETED | DE module gone |
+| `tests/test_briefing_fr.py` | DELETED | FR module gone (FR content moves to YAML) |
+| `tests/test_i18n.py` | unchanged | UI chrome strings continue to be tested |
 | `tests/test_export.py` | ADAPTED | Now operates on `CantonReport` |
 | `tests/test_aggregation.py` | EXTENDED | New `RegionReport` fields |
 | `tests/test_quality.py` | EXTENDED | Canton-level quality folding |
@@ -327,7 +336,7 @@ Each step is a commit, lands independently, keeps the UI green except where call
 6. **Renderer** — `render_briefing()` with Jinja2, Handlebars adapter, custom filters and globals. Snapshot test against a fixed `CantonReport`.
 7. **Maps** — `src/viz/maps.py::build_canton_map(canton_report, map_spec: MapSpec)` for both new maps, reusing the existing geopandas/folium code.
 8. **`app.py` rewire** — sidebar mode-radio removed, region selector becomes canton selector. Pipeline: `compute_region_report` → `compute_canton_report`. Sections loop uses new keys. Quality panel uses canton aggregation. **This is the cut-over commit — first commit where the user sees the new UI.**
-9. **Cleanup** — delete `text_blocks.py`, `template.py`, `tests/test_text_blocks.py`, `_TREND_LABELS`, `BERNE_REGION_IDS`.
+9. **Cleanup** — delete `text_blocks_de.py`, `text_blocks_fr.py`, `template.py`, `tests/test_text_blocks.py`, `tests/test_briefing_fr.py`, `_TREND_LABELS`, `BERNE_REGION_IDS`.
 
 ### Validation
 
@@ -357,3 +366,23 @@ These should be answered before implementation starts but are not blocking for t
 - **Jinja2 / Handlebars mismatch surprises** — edge cases beyond `{{#each}}` and `{{ this.x }}` may surface. Mitigation: the YAML is small; the snapshot tests catch divergence early.
 - **Per-canton max_warnlevel may surprise stakeholders** — a single small region driving a "Stufe 4" headline for the whole canton may be misleading. Mitigation flagged as an open question to validate with the user post-launch; alternative (modal level, area-weighted) is a one-line change in `compute_canton_report`.
 - **BAFU Warnkarte API breaking changes** — field renames in `feature.attributes`. Mitigation: Pydantic validates the response shape; failure cleanly degrades to fixture.
+- **FR YAML content not yet fleshed out** — the FR translations currently in `text_blocks_fr.py` are richer than what's in the YAML's section templates (only DE templates exist; `nomenclature` is trilingual but `sections.template` is DE-only). Step 4 must port the FR text content into the YAML before step 9 deletes `text_blocks_fr.py`, otherwise FR users lose content. Mitigation: explicit acceptance criterion on step 4.
+
+## Relation to other work
+
+A parallel workstream added French language support to the existing per-region briefing. It is now on `main`:
+
+- Spec: `docs/superpowers/specs/2026-05-28-french-language-design.md`
+- Plan: `docs/superpowers/plans/2026-05-28-french-language.md`
+- Code: `src/i18n/strings.py`, `src/briefing/text_blocks_fr.py`, FR-aware `template.py`, `src/export/report.py`, `src/viz/charts.py`, sidebar language toggle
+
+**What this spec inherits from that work:**
+- Language toggle UX (`de` / `fr`) is established. We keep it.
+- `i18n.t(key, lang)` for UI chrome strings is the right abstraction. We keep using it for everything outside the report body.
+- Localized chart and HTML export already exist. We do not regress them.
+
+**What this spec changes:**
+- The text-block dispatch (`LAGE_BLOCKS_DE` / `LAGE_BLOCKS_FR` keyed by mode and CDI) is replaced by the YAML ruleset. The mode dimension (`behoerden` / `bulletin`) collapses to bulletin only. The language dimension (`de` / `fr`) is preserved via the YAML's `de` / `fr` keys.
+- `template.py::build_briefing(report, mode, lang)` becomes `renderer.py::render_briefing(canton_report, ruleset, locale)`. The `mode` parameter goes away.
+
+**Coordination:** step 4 (YAML restructure) must port the existing FR content from `text_blocks_fr.py` into the YAML's section templates before step 9 can delete `text_blocks_fr.py`. This is the only sequencing constraint added by the inheritance.
