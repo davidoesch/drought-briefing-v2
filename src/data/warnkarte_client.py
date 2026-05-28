@@ -45,7 +45,7 @@ def fetch_for_regions(region_ids: list[int]) -> dict[int, WarnkarteEntry]:
     """
     Fetch the current warning level for each region.
 
-    Returns a dict keyed by drought_region_id.
+    Returns a dict keyed by the requested region_id (the URL parameter).
     On any network or HTTP error, falls back to the fixture file.
     """
     try:

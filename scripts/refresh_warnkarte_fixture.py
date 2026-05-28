@@ -41,7 +41,7 @@ def main() -> None:
             "info_it": attrs["info_it"],
             "valid_from": valid_from.isoformat(),
         }
-    FIXTURE.write_text(json.dumps(out, indent=2, ensure_ascii=False))
+    FIXTURE.write_text(json.dumps(out, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
     print(f"Wrote {len(out)} regions to {FIXTURE}")
 
 

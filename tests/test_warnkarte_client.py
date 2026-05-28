@@ -1,5 +1,8 @@
 # tests/test_warnkarte_client.py
 from datetime import datetime
+
+import responses
+
 from src.data.warnkarte_client import fetch_for_regions, _parse_response
 from src.models import WarnkarteEntry
 
@@ -26,10 +29,6 @@ def test_parse_response_extracts_attributes():
         info_it="Pericolo moderato",
         valid_from=datetime(2026, 5, 28),
     )
-
-
-import responses
-from src.data.warnkarte_client import fetch_for_regions
 
 
 @responses.activate
@@ -70,3 +69,4 @@ def test_fetch_for_regions_falls_back_to_fixture(recwarn):
     assert 34 in out
     # The function should have emitted a warning about the fallback
     assert any("fetch failed" in str(w.message) for w in recwarn.list)
+    assert out[34].warnlevel >= 1  # fixture data flowed through (not zero-valued junk)
