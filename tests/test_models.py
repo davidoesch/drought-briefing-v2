@@ -1,5 +1,7 @@
 # tests/test_models.py
-from src.models import MapSpec
+from datetime import datetime
+
+from src.models import CantonReport, MapSpec, QualityReport, RegionReport, WarnkarteEntry
 
 
 def test_map_spec_construction():
@@ -14,11 +16,6 @@ def test_map_spec_construction():
     assert spec.style == "choropleth_warnregionen"
 
 
-from datetime import datetime
-
-from src.models import WarnkarteEntry
-
-
 def test_warnkarte_entry_construction():
     entry = WarnkarteEntry(
         drought_region_id=34,
@@ -30,9 +27,6 @@ def test_warnkarte_entry_construction():
     )
     assert entry.warnlevel == 2
     assert entry.info_de == "Mässige Gefahr"
-
-
-from src.models import CantonReport, QualityReport, RegionReport
 
 
 def _make_minimal_region_report(rid: int, cdi: int = 2) -> RegionReport:
