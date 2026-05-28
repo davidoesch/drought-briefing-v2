@@ -1,9 +1,9 @@
 # tests/test_canton.py
 from datetime import datetime
 
-from src.aggregation.canton import compute_canton_report
+from src.aggregation.canton import _fold_quality, compute_canton_report
 from src.data.stac_client import load as load_data
-from src.models import WarnkarteEntry
+from src.models import QualityReport, WarnkarteEntry
 
 
 def _make_warnkarte(rid: int, warnlevel: int) -> WarnkarteEntry:
@@ -47,10 +47,6 @@ def test_compute_canton_report_basic():
     assert canton.max_warnlevel_info_de == "Grosse Gefahr"
     # All region IDs appear
     assert {r.region_id for r in canton.regions} == {33, 34, 35, 37, 38, 41}
-
-
-from src.aggregation.canton import _fold_quality
-from src.models import QualityReport
 
 
 def _q(overall: str, age: int = 1, coverage: float = 1.0) -> QualityReport:

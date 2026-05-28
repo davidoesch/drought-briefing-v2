@@ -70,7 +70,6 @@ def compute_region_report(
     hist_spi_series = hist_region["spi_3m"] if not hist_region.empty else None
     quality = run_quality_checks(row, bundle.data_timestamp, spi_3m_reference=hist_spi_series)
 
-    # --- New fields for canton report (added 2026-05-28) ---
     precip_sum_1m = _safe(row.get("precip_sum_1m"))
     precip_sum_3m = _safe(row.get("precip_sum_3m"))
     precip_1m_index = (
@@ -127,8 +126,8 @@ def compute_region_report(
 
 def _compute_cdi_forecast_week2(bundle: DataBundle, region_id: int) -> int | None:
     """Return the CDI forecast for valid_at ≈ today + 14 d. None if forecast horizon is shorter."""
-    forecast = getattr(bundle, "forecast_df", None)
-    if forecast is None or forecast.empty:
+    forecast = bundle.forecast_df
+    if forecast.empty:
         return None
     target_date = bundle.data_timestamp + timedelta(days=14)
     region_forecast = forecast[forecast["drought_region_id"] == region_id]
@@ -137,6 +136,8 @@ def _compute_cdi_forecast_week2(bundle: DataBundle, region_id: int) -> int | Non
     region_forecast = region_forecast.copy()
     region_forecast["delta"] = (region_forecast["valid_at"] - target_date).abs()
     closest = region_forecast.sort_values("delta").iloc[0]
+    if closest["delta"] > pd.Timedelta(days=5):
+        return None
     if pd.isna(closest.get("cdi_p50")):
         return None
     return int(closest["cdi_p50"])

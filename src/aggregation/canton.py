@@ -61,6 +61,8 @@ _QUALITY_RANK = {"ok": 0, "warning": 1, "error": 2}
 
 def _fold_quality(qualities: list[QualityReport]) -> QualityReport:
     """Combine per-region quality reports into one canton-level report."""
+    if not qualities:
+        raise ValueError("Cannot fold empty list of QualityReports")
     data_age = max(q.data_age_days for q in qualities)
     coverage = sum(q.coverage_pct for q in qualities) / len(qualities)
     missing: list[str] = []
@@ -75,7 +77,7 @@ def _fold_quality(qualities: list[QualityReport]) -> QualityReport:
         data_age_days=data_age,
         coverage_pct=coverage,
         missing_columns=sorted(set(missing)),
-        outlier_flags=flags,
+        outlier_flags=sorted(set(flags)),
         is_stale=is_stale,
         overall=overall,
     )
