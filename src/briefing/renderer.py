@@ -1,11 +1,23 @@
 # src/briefing/renderer.py
 from __future__ import annotations
 
+import re
 from pathlib import Path
 
 import yaml
 
 from src.briefing.schemas import RulesetSchema
+
+_EACH_OPEN = re.compile(r"\{\{#each\s+([^\s}]+)\s*\}\}")
+_EACH_CLOSE = re.compile(r"\{\{/each\}\}")
+_THIS_FIELD = re.compile(r"\{\{\s*this\.([^\s}]+)\s*\}\}")
+
+
+def _handlebars_to_jinja2(src: str) -> str:
+    src = _EACH_OPEN.sub(r"{% for item in \1 %}", src)
+    src = _EACH_CLOSE.sub("{% endfor %}", src)
+    src = _THIS_FIELD.sub(r"{{ item.\1 }}", src)
+    return src
 
 
 def load_ruleset(path: Path) -> RulesetSchema:
