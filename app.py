@@ -147,15 +147,10 @@ with st.expander(t("quality_expander", lang)):
 
 # ── Export buttons ─────────────────────────────────────────────────────────
 with export_placeholder:
-    if False:  # disabled until Phase 8b rewrites to_html for CantonReport
-        # TODO(Phase 8b): to_html needs to be rewritten to accept CantonReport.
-        # Do NOT remove the `if False:` guard above without first updating to_html.
-        html_str = to_html(doc, canton)
-        st.download_button(
-            label=t("btn_html", lang),
-            data=html_str.encode("utf-8"),
-            file_name=f"trockenheit_{canton.data_timestamp.strftime('%Y%m%d')}.html",
-            mime="text/html",
-        )
-    else:
-        st.info(t("pdf_hint", lang))
+    html_str = to_html(doc, canton)
+    st.download_button(
+        label=t("btn_html", lang),
+        data=html_str.encode("utf-8"),
+        file_name=f"trockenheit_{canton.data_timestamp.strftime('%Y%m%d')}.html",
+        mime="text/html",
+    )

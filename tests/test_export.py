@@ -1,46 +1,32 @@
-import plotly.graph_objects as go
+from datetime import datetime
+from pathlib import Path
 
-from src.aggregation.regional import compute_region_report
-from src.briefing.template import build_briefing
-from src.data.fixture_loader import load
+from src.aggregation.canton import compute_canton_report
+from src.briefing.renderer import load_ruleset, render_briefing
+from src.data.stac_client import load as load_data
 from src.export.report import to_html
-from src.data.stac_client import load as load_bundle
+from src.models import WarnkarteEntry
 
 
-def test_to_html_embeds_plotly_not_png():
-    bundle = load()
-    report = compute_region_report(34, bundle)
-    doc = build_briefing(report, "behoerden")
-    fig = go.Figure(go.Scatter(x=[1, 2], y=[1, 2]))
+def test_to_html_contains_canton_name_and_sections():
+    bundle = load_data()
+    warnkarte = {
+        rid: WarnkarteEntry(
+            drought_region_id=rid,
+            warnlevel=2,
+            info_de="Mässige Gefahr",
+            info_fr="Danger limité",
+            info_it="-",
+            valid_from=datetime(2026, 5, 28),
+        )
+        for rid in [33, 34, 35, 37, 38, 41]
+    }
+    canton = compute_canton_report(canton_id=2, bundle=bundle, warnkarte_data=warnkarte)
+    ruleset = load_ruleset(Path("data/ruleset/canton-bulletin.yaml"))
+    doc = render_briefing(canton, ruleset, locale="de")
 
-    html = to_html(doc, report, chart_fig=fig, map_png=None)
+    html = to_html(doc, canton)
 
-    import re
-    assert "plotly" in html.lower(), "Plotly JS must be embedded inline"
-    assert not re.search(r'<img[^>]+src=["\']data:image/png;base64', html), (
-        "Chart must not be a static PNG <img> tag"
-    )
-    assert "<!DOCTYPE html>" in html
-
-
-def test_to_html_without_chart_is_valid():
-    bundle = load()
-    report = compute_region_report(34, bundle)
-    doc = build_briefing(report, "behoerden")
-
-    html = to_html(doc, report, chart_fig=None, map_png=None)
-
-    assert "<!DOCTYPE html>" in html
-    assert "plotly" not in html.lower(), "No Plotly when chart_fig is None"
-
-
-def test_to_html_fr_uses_french_strings():
-    bundle = load_bundle()
-    report = compute_region_report(34, bundle)
-    doc = build_briefing(report, "behoerden", lang="fr")
-    fig = go.Figure(go.Scatter(x=[1, 2], y=[1, 2]))
-    html = to_html(doc, report, chart_fig=fig, map_png=None, lang="fr")
-    assert "Situation" in html
-    assert "Lage" not in html
-    assert "Mittelland bernois" in html
-    assert "Berner Mittelland" not in html
+    assert "Bern" in html
+    assert "Mässige Gefahr" in html
+    assert "allgemeine-lage" in html
