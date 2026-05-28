@@ -30,6 +30,7 @@ jobs:
           cp -r config _site/config
           cp -r src _site/src
           cp -r data _site/data
+          find _site -name __pycache__ -type d -exec rm -rf {} + 2>/dev/null || true
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3

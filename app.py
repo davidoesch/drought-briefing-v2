@@ -2,6 +2,7 @@
 """One Click Drought Briefing — Streamlit entry point for Kanton Bern."""
 from __future__ import annotations
 
+import logging
 import math
 import streamlit as st
 
@@ -142,7 +143,8 @@ with st.expander("Qualität & Datengrundlage"):
 with export_placeholder:
     try:
         map_png = build_export_map(report, all_reports)
-    except Exception:
+    except Exception as _exc:
+        logging.warning("build_export_map failed (%r); HTML export will omit map", _exc)
         map_png = None
     html_str = to_html(doc, report, chart_fig=fig, map_png=map_png)
 
