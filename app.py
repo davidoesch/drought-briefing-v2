@@ -14,7 +14,7 @@ from src.export.report import to_html
 from src.i18n.strings import get_cdi_labels, get_region_names, t
 from src.models import DataBundle
 from src.viz.charts import build_timeseries
-from src.viz.maps import build_export_map, build_map
+from src.viz.maps import build_map
 
 st.set_page_config(
     page_title="Trockenheitsbriefing / Bulletin sécheresse",
@@ -157,17 +157,13 @@ with st.expander(t("quality_expander", lang)):
 
 # ── Export buttons ─────────────────────────────────────────────────────────
 with export_placeholder:
-    try:
-        map_png = build_export_map(report, all_reports)
-    except Exception as _exc:
-        logging.warning("build_export_map failed (%r); HTML export will omit map", _exc)
-        map_png = None
-    html_str = to_html(doc, report, chart_fig=fig, map_png=map_png, lang=lang)
+    # Pass None for map_png since we dropped backend PNG generation
+    html_str = to_html(doc, report, chart_fig=fig, map_png=None)
 
-    st.info(t("pdf_hint", lang))
+    st.info("💡 PDF: Datei → Drucken → Als PDF speichern (Ctrl+P)")
     st.download_button(
-        label=t("btn_html", lang),
+        label="⬇ HTML exportieren",
         data=html_str.encode("utf-8"),
-        file_name=f"trockenheit_{get_region_names(lang).get(report.region_id, report.region_name_de).replace(' ', '_')}_{report.data_timestamp.strftime('%Y%m%d')}.html",
+        file_name=f"trockenheit_{report.region_name_de.replace(' ', '_')}_{report.data_timestamp.strftime('%Y%m%d')}.html",
         mime="text/html",
     )
