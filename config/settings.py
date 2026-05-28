@@ -66,6 +66,17 @@ REFERENCE_ZIP_NAME: Final[str] = (
 
 GEOJSON_FIXTURE: Final[Path] = DATA_DIR / "berne_warnregionen.geojson"
 
+# Canton → drought region mapping.
+# Bern is the launch canton. Other cantons will be added when their
+# canton→regions mapping is curated.
+CANTON_TO_REGIONS: Final[dict[int, frozenset]] = {
+    2: frozenset({33, 34, 35, 37, 38, 41}),   # Bern (BFS canton ID 2)
+}
+
+CANTON_NAMES: Final[dict[int, dict[str, str]]] = {
+    2: {"de": "Bern", "fr": "Berne", "it": "Berna"},
+}
+
 DATA_STALENESS_DAYS: Final[int] = 14
 INDICATOR_COLUMNS: Final[list[str]] = [
     "cdi", "spi_3m", "soil_moisture_ufc", "vhi",

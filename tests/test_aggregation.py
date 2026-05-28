@@ -48,3 +48,12 @@ def test_all_berne_regions_compute(bundle):
     for rid in BERNE_REGION_IDS:
         report = compute_region_report(rid, bundle)
         assert 0 <= report.cdi <= 5
+
+
+from config.settings import CANTON_TO_REGIONS, CANTON_NAMES
+
+
+def test_canton_to_regions_bern():
+    assert CANTON_TO_REGIONS[2] == frozenset({33, 34, 35, 37, 38, 41})
+    assert CANTON_NAMES[2]["de"] == "Bern"
+    assert CANTON_NAMES[2]["fr"] == "Berne"
