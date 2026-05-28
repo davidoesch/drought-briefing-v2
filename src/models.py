@@ -35,12 +35,22 @@ class RegionReport:
     spi_3m: float
     soil_moisture_pct: float
     vhi: float
-    cdi_trend: int          # -1 improving, 0 stable, +1 worsening
+    cdi_trend: int
     spi_3m_delta: float
     vhi_delta: float
-    pct_critical: float     # fraction of last 52 weeks with CDI >= 3
-    spi_3m_percentile: int  # vs historic distribution
+    pct_critical: float
+    spi_3m_percentile: int
     quality: QualityReport
+    # New fields added 2026-05-28 (defaults preserve backward compat until step 3)
+    precip_sum_1m: float = 0.0
+    precip_sum_3m: float = 0.0
+    precip_1m_index: int = 1
+    soil_moisture_index: int = 1
+    hydro_index: int = 1
+    warnlevel: int = 1
+    warnlevel_info_de: str = ""
+    warnlevel_info_fr: str = ""
+    cdi_forecast_week2: int | None = None
 
 
 @dataclass
