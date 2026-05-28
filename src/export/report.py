@@ -1,9 +1,4 @@
 # src/export/report.py
-"""
-Export pipeline:
-  to_html(doc, report, chart_fig, map_png) -> self-contained HTML string (all CSS inline)
-  to_pdf(html_str) -> PDF bytes via WeasyPrint
-"""
 from __future__ import annotations
 
 import base64
@@ -12,11 +7,6 @@ import plotly.io as pio
 
 from config.settings import CDI_COLOURS, CDI_LABELS
 from src.models import BriefingDocument, RegionReport
-
-
-def _chart_to_png_b64(fig) -> str:
-    img_bytes = pio.to_image(fig, format="png", width=700, height=300, scale=2)
-    return base64.b64encode(img_bytes).decode()
 
 
 def _map_to_b64(png_bytes: bytes) -> str:
@@ -38,8 +28,8 @@ h1 { font-size: 22px; color: #1a1a2e; margin-bottom: 4px; }
 .section { margin-bottom: 20px; }
 .section h2 { font-size: 12px; text-transform: uppercase; letter-spacing: 1px; color: #888; margin-bottom: 6px; }
 .section p { font-size: 13px; line-height: 1.7; color: #333; margin: 0; }
-.visuals { display: flex; gap: 16px; margin-bottom: 24px; }
-.visual-box { flex: 1; }
+.visuals { display: flex; gap: 16px; margin-bottom: 24px; flex-wrap: wrap; }
+.visual-box { flex: 1; min-width: 300px; }
 .visual-box img { width: 100%; border-radius: 8px; }
 .quality-bar { background: #f5f5f5; border-radius: 6px; padding: 10px 16px;
                font-size: 11px; color: #666; margin-top: 24px; }
@@ -72,8 +62,7 @@ def to_html(
 
     chart_html = ""
     if chart_fig is not None:
-        b64 = _chart_to_png_b64(chart_fig)
-        chart_html = f'<img src="data:image/png;base64,{b64}" alt="Zeitreihe">'
+        chart_html = pio.to_html(chart_fig, full_html=False, include_plotlyjs="inline")
 
     map_html = ""
     if map_png is not None:
@@ -156,9 +145,3 @@ def to_html(
 </body>
 </html>"""
     return html
-
-
-def to_pdf(html_str: str) -> bytes:
-    """Convert HTML string to PDF bytes via WeasyPrint."""
-    import weasyprint
-    return weasyprint.HTML(string=html_str).write_pdf()

@@ -18,7 +18,7 @@ BERNE_REGION_NAMES: Final[dict[int, str]] = {
 CDI_LABELS: Final[dict[int, str]] = {
     0: "Keine Trockenheit",
     1: "Leichte Trockenheit",
-    2: "Mässige Trockenheit",
+    2: "Erhebliche Trockenheit",
     3: "Schwere Trockenheit",
     4: "Extreme Trockenheit",
     5: "Ausserordentliche Trockenheit",
