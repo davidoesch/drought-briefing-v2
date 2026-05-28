@@ -5,7 +5,7 @@ from src.briefing.renderer import load_ruleset
 from src.briefing.schemas import RulesetSchema
 
 
-RULESET_PATH = Path("data/ruleset/canton-bulletin.yaml")
+RULESET_PATH = Path(__file__).resolve().parent.parent / "data/ruleset/canton-bulletin.yaml"
 
 
 def test_load_ruleset_returns_schema_instance():

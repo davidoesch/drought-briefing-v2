@@ -68,7 +68,7 @@ class HandlungsempfehlungenSpec(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
 
-class MapSpec(BaseModel):
+class MapSpecSchema(BaseModel):
     id: str
     title: dict[str, str]
     source: str
@@ -80,7 +80,7 @@ class LeadWarnstufe(BaseModel):
     headline: dict[str, str]
     meta: dict[str, str]
     farben_pro_stufe: dict[int, dict[str, str]]
-    maps: list[MapSpec]
+    maps: list[MapSpecSchema]
     placeholders: list[dict[str, Any]] | None = None
     model_config = ConfigDict(extra="forbid")
 
@@ -94,6 +94,7 @@ class SectionSpec(BaseModel):
     id: str
     title: dict[str, str]
     locale: str | None = None
+    # str = single-locale (use only when locale is set on the section); dict[str, str] = multilingual
     template: dict[str, str] | str
     placeholders: list[dict[str, Any]] | None = None
     notes: list[str] | None = None
