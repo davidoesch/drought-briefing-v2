@@ -111,13 +111,12 @@ for col, map_spec in zip(map_cols, doc.lead_maps):
 
 st.divider()
 
-# ── Text sections (replaced in Task 8.4) ──────────────────────────────────
-for section_key in ["lage", "entwicklung", "einordnung"]:
-    sec_text = doc.sections.get(section_key, "")
-    if sec_text:
-        st.markdown(f"**{section_key}**")
-        st.markdown(sec_text)
-        st.write("")
+# ── Text sections ──────────────────────────────────────────────────────────
+for sec in _ruleset().sections:
+    title = sec.title.get(lang, sec.title.get("de", sec.id))
+    st.markdown(f"## {title}")
+    st.markdown(doc.sections[sec.id])
+    st.write("")
 
 # ── Quality panel ──────────────────────────────────────────────────────────
 with st.expander(t("quality_expander", lang)):
