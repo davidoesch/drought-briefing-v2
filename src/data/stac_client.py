@@ -65,20 +65,30 @@ def _find_asset_href(assets: dict, keyword: str) -> str:
     raise RuntimeError(f"No asset containing '{keyword}' found in STAC item")
 
 
-def _download_and_parse_zip(url: str) -> tuple[pd.DataFrame, list[str]]:
+def _download_zip_bytes(url: str) -> bytes:
     import requests
 
     response = requests.get(url, timeout=_DOWNLOAD_TIMEOUT)
     response.raise_for_status()
-    with zipfile.ZipFile(io.BytesIO(response.content)) as z:
-        csv_name = next(n for n in z.namelist() if n.endswith(".csv"))
-        with z.open(csv_name) as f:
+    return response.content
+
+
+def _parse_csv_from_zip_bytes(zip_bytes: bytes, filename: str) -> tuple[pd.DataFrame, list[str]]:
+    with zipfile.ZipFile(io.BytesIO(zip_bytes)) as z:
+        with z.open(filename) as f:
             raw = f.read().decode("utf-8", errors="replace")
     lines = raw.splitlines()
     comment_lines = [line for line in lines if line.startswith("#")]
     data_lines = [line for line in lines if not line.startswith("#") and line.strip()]
     df = pd.read_csv(io.StringIO("\n".join(data_lines)), sep=";")
     return df, comment_lines
+
+
+def _download_and_parse_zip(url: str) -> tuple[pd.DataFrame, list[str]]:
+    zip_bytes = _download_zip_bytes(url)
+    with zipfile.ZipFile(io.BytesIO(zip_bytes)) as z:
+        csv_name = next(n for n in z.namelist() if n.endswith(".csv"))
+    return _parse_csv_from_zip_bytes(zip_bytes, csv_name)
 
 
 def _parse_timestamp(comment_lines: list[str]) -> datetime:
@@ -111,16 +121,28 @@ def _fetch_from_stac() -> DataBundle:
     )
     assets = latest_item.get("assets", {})
 
-    current_df, comment_lines = _download_and_parse_zip(_find_asset_href(assets, "current"))
+    current_zip_bytes = _download_zip_bytes(_find_asset_href(assets, "current"))
+    current_df, comment_lines = _parse_csv_from_zip_bytes(
+        current_zip_bytes, "weekly_current_regions.csv"
+    )
+    forecast_raw, _ = _parse_csv_from_zip_bytes(
+        current_zip_bytes, "weekly_forecast_regions.csv"
+    )
     historic_df, _ = _download_and_parse_zip(_find_asset_href(assets, "historic"))
     reference_df, _ = _download_and_parse_zip(_find_asset_href(assets, "reference"))
 
     data_timestamp = _parse_timestamp(comment_lines)
 
+    forecast_df = forecast_raw.copy()
+    forecast_df["valid_at"] = pd.to_datetime(
+        forecast_df["valid_at"], format="%d.%m.%Y", errors="coerce"
+    )
+
     return DataBundle(
         current_df=_parse_dates(current_df),
         historic_df=_parse_dates(historic_df),
         reference_df=reference_df,
+        forecast_df=forecast_df,
         data_timestamp=data_timestamp,
         source="api",
     )
