@@ -6,7 +6,7 @@ import logging
 import math
 import streamlit as st
 
-from config.settings import BERNE_REGION_IDS, CDI_COLOURS
+from config.settings import BERNE_REGION_IDS, CANTON_NAMES, CANTON_TO_REGIONS, CDI_COLOURS
 from src.aggregation.regional import compute_region_report
 from src.briefing.template import build_briefing
 from src.data.stac_client import load as load_data
@@ -42,19 +42,12 @@ with st.sidebar:
         index=0,
     )
 
-    mode = st.radio(
-        t("mode_label", lang),
-        options=["behoerden", "bulletin"],
-        format_func=lambda m: t("mode_behoerden", lang) if m == "behoerden" else t("mode_bulletin", lang),
+    canton_options = sorted(CANTON_TO_REGIONS.keys())
+    selected_canton_id = st.selectbox(
+        "Kanton",
+        options=canton_options,
+        format_func=lambda cid: CANTON_NAMES[cid].get(lang, CANTON_NAMES[cid]["de"]),
         index=0,
-    )
-
-    region_options = sorted(BERNE_REGION_IDS)
-    selected_region_id = st.selectbox(
-        t("region_label", lang),
-        options=region_options,
-        format_func=lambda rid: get_region_names(lang).get(rid, str(rid)),
-        index=1,
     )
 
     st.divider()
