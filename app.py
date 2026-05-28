@@ -4,13 +4,12 @@ from __future__ import annotations
 
 import math
 import streamlit as st
-from streamlit_folium import st_folium
 
 from config.settings import BERNE_REGION_IDS, BERNE_REGION_NAMES, CDI_COLOURS, CDI_LABELS
 from src.aggregation.regional import compute_region_report
 from src.briefing.template import build_briefing
 from src.data.stac_client import load as load_data
-from src.export.report import to_html, to_pdf
+from src.export.report import to_html
 from src.models import DataBundle
 from src.viz.charts import build_timeseries
 from src.viz.maps import build_export_map, build_map
@@ -110,7 +109,7 @@ map_col, chart_col = st.columns(2)
 with map_col:
     st.subheader("CDI-Karte Kanton Bern")
     folium_map = build_map(report, all_reports)
-    st_folium(folium_map, width=None, height=300, returned_objects=[])
+    st.components.v1.html(folium_map._repr_html_(), height=300)
 
 with chart_col:
     st.subheader("Zeitreihe — letzte 52 Wochen")
@@ -141,15 +140,13 @@ with st.expander("Qualität & Datengrundlage"):
 
 # ── Export buttons ─────────────────────────────────────────────────────────
 with export_placeholder:
-    map_png = build_export_map(report, all_reports)
+    try:
+        map_png = build_export_map(report, all_reports)
+    except Exception:
+        map_png = None
     html_str = to_html(doc, report, chart_fig=fig, map_png=map_png)
 
-    st.download_button(
-        label="⬇ PDF exportieren",
-        data=to_pdf(html_str),
-        file_name=f"trockenheit_{report.region_name_de.replace(' ', '_')}_{report.data_timestamp.strftime('%Y%m%d')}.pdf",
-        mime="application/pdf",
-    )
+    st.info("💡 PDF: Datei → Drucken → Als PDF speichern (Ctrl+P)")
     st.download_button(
         label="⬇ HTML exportieren",
         data=html_str.encode("utf-8"),
