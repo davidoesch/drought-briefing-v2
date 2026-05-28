@@ -1,0 +1,115 @@
+# src/briefing/schemas.py
+from __future__ import annotations
+
+from typing import Any
+
+from pydantic import BaseModel, ConfigDict, Field
+
+
+class ContextSpec(BaseModel):
+    scope: str
+    required_inputs: dict[str, str] = Field(default_factory=dict)
+    model_config = ConfigDict(extra="forbid")
+
+
+class DataSourceSpec(BaseModel):
+    type: str
+    provider: str
+    title: str
+    url: str | None = None
+    landing_page: str | None = None
+    response_path: str | None = None
+    fields: dict[str, str] | None = None
+    description: str | None = None
+    datasets_used: list[str] | None = None
+    model_config = ConfigDict(extra="forbid")
+
+
+class ReferenceSpec(BaseModel):
+    title: str
+    url: str
+    provider: str
+    model_config = ConfigDict(extra="forbid")
+
+
+class NomenclatureIndicatorSpec(BaseModel):
+    field: str | None = None
+    fields: list[str] | None = None
+    scope: str | None = None
+    note: str | None = None
+    adjective: dict[int, dict[str, str]] | None = None
+    noun: dict[int, dict[str, str]] | None = None
+    model_config = ConfigDict(extra="forbid")
+
+
+class NomenclatureSpec(BaseModel):
+    indicators: dict[str, NomenclatureIndicatorSpec]
+    model_config = ConfigDict(extra="forbid")
+
+
+class TrendSpec(BaseModel):
+    rule: str
+    stable_tolerance: float
+    increase: dict[str, str]
+    decrease: dict[str, str]
+    stable: dict[str, str]
+    model_config = ConfigDict(extra="forbid")
+
+
+class HandlungsempfehlungenLevel(BaseModel):
+    empfehlungen: dict[str, list[str]] | None = None
+    fallback: int | None = None
+    model_config = ConfigDict(extra="forbid")
+
+
+class HandlungsempfehlungenSpec(BaseModel):
+    source_ref: str
+    by_gefahrenstufe: dict[int, HandlungsempfehlungenLevel]
+    model_config = ConfigDict(extra="forbid")
+
+
+class MapSpec(BaseModel):
+    id: str
+    title: dict[str, str]
+    source: str
+    style: str
+    model_config = ConfigDict(extra="forbid")
+
+
+class LeadWarnstufe(BaseModel):
+    headline: dict[str, str]
+    meta: dict[str, str]
+    farben_pro_stufe: dict[int, dict[str, str]]
+    maps: list[MapSpec]
+    placeholders: list[dict[str, Any]] | None = None
+    model_config = ConfigDict(extra="forbid")
+
+
+class LeadSpec(BaseModel):
+    warnstufe: LeadWarnstufe
+    model_config = ConfigDict(extra="forbid")
+
+
+class SectionSpec(BaseModel):
+    id: str
+    title: dict[str, str]
+    locale: str | None = None
+    template: dict[str, str] | str
+    placeholders: list[dict[str, Any]] | None = None
+    notes: list[str] | None = None
+    model_config = ConfigDict(extra="forbid")
+
+
+class RulesetSchema(BaseModel):
+    id: str
+    title: str
+    description: str | None = None
+    context: ContextSpec
+    data_sources: dict[str, DataSourceSpec]
+    references: dict[str, ReferenceSpec]
+    nomenclature: NomenclatureSpec
+    trend: dict[str, TrendSpec]
+    handlungsempfehlungen: HandlungsempfehlungenSpec
+    lead: LeadSpec
+    sections: list[SectionSpec]
+    model_config = ConfigDict(extra="forbid")
