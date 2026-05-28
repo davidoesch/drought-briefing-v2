@@ -92,7 +92,11 @@ class MapSpec:
 
 @dataclass
 class BriefingDocument:
-    sections: dict[str, str]   # keys: "lage", "entwicklung", "einordnung", "datengrundlage"
-    report: RegionReport
-    mode: str                   # "behoerden" | "bulletin"
-    generated_at: datetime
+    sections: dict[str, str]
+    report: object                        # CantonReport or RegionReport
+    locale: str = "de"
+    generated_at: datetime = field(default_factory=datetime.now)
+    lead_maps: list = field(default_factory=list)   # list[MapSpec]
+    lead_headline: str = ""
+    lead_meta: str = ""
+    mode: str = ""   # legacy compatibility; removed in Phase 9
