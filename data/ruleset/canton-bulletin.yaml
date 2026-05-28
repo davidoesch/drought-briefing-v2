@@ -1,4 +1,4 @@
-id: example-report
+id: canton-bulletin
 title: Example drought bulletin template
 description: |
   Weekly bulletin per drought region. Uses the recommended terminology from the
@@ -6,6 +6,11 @@ description: |
   Rule: the terms "Trockenheit" / "trocken" are reserved for the lead block and
   the CDI description. For the contributing factors (precipitation, surface/ground
   water, soil moisture) use the "deficit" terminology instead.
+
+context:
+  scope: canton
+  required_inputs:
+    canton_id: "BFS canton ID (e.g. 2 for Bern)"
 
 # ---------------------------------------------------------------------------
 # External data sources.
@@ -250,26 +255,23 @@ sections:
         description: "Iterate over each region in the canton, render per-region paragraph."
 
   - id: handlungsoptionen
-    title: { de: "Handlungsoptionen", fr: "Options d'action", it: "Opzioni d'azione" }
-    locale: de
-    template: |
-      {{#each handlungsempfehlungen.by_gefahrenstufe[warnkarte.warnlevel].empfehlungen.de}}
-      - {{ this }}
-      {{/each}}
+    title:
+      de: "Handlungsoptionen"
+      fr: "Options d'action"
+    template:
+      de: |
+        {{#each handlungsempfehlungen.by_gefahrenstufe[canton.max_warnlevel].empfehlungen.de}}
+        - {{ this }}
+        {{/each}}
+      fr: |
+        {{#each handlungsempfehlungen.by_gefahrenstufe[canton.max_warnlevel].empfehlungen.fr}}
+        - {{ this }}
+        {{/each}}
     placeholders:
-      - id: aktuelle_warnstufe
-        source: warnkarte.warnlevel
-        fetched_from: data_sources.warnkarte
+      - id: max_warnlevel
+        source: canton.max_warnlevel
         resolver: handlungsempfehlungen.by_gefahrenstufe
-        fallback_rule: "If the recommendation list is missing, fall back to the .fallback level (3 -> 2, 5 -> 4)."
-      - id: warnstufe_klartext
-        source: warnkarte.info_de
-        fetched_from: data_sources.warnkarte
-        description: "Plain-text label provided by the API, e.g. 'Mässige Gefahr'."
-    notes:
-      - "The warning level is fetched live from the BAFU warning map (API), not derived from the CSV dataset."
-      - "Recommendation texts are taken verbatim from trockenheit.admin.ch."
-      - "Levels 3 and 5 fall back to 2 and 4 respectively — BAFU does not publish dedicated recommendations for them."
+        fallback_rule: "If recommendations missing for a level, follow .fallback chain (3 → 2, 5 → 4)."
 
   - id: datenquellen
     title: { de: "Datenquellen", fr: "Sources de données", it: "Fonti dei dati" }
