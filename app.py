@@ -130,7 +130,7 @@ with map_col:
 
 with chart_col:
     st.subheader(t("section_chart", lang))
-    fig = build_timeseries(bundle.historic_df, selected_region_id)
+    fig = build_timeseries(bundle.historic_df, selected_region_id, lang=lang)
     st.plotly_chart(fig, use_container_width=True)
 
 # ── Text sections ──────────────────────────────────────────────────────────
@@ -162,7 +162,7 @@ with export_placeholder:
     except Exception as _exc:
         logging.warning("build_export_map failed (%r); HTML export will omit map", _exc)
         map_png = None
-    html_str = to_html(doc, report, chart_fig=fig, map_png=map_png)
+    html_str = to_html(doc, report, chart_fig=fig, map_png=map_png, lang=lang)
 
     st.info(t("pdf_hint", lang))
     st.download_button(

@@ -5,7 +5,8 @@ import base64
 
 import plotly.io as pio
 
-from config.settings import CDI_COLOURS, CDI_LABELS
+from config.settings import CDI_COLOURS
+from src.i18n.strings import get_cdi_labels, get_region_names, t
 from src.models import BriefingDocument, RegionReport
 
 
@@ -42,10 +43,13 @@ def to_html(
     report: RegionReport,
     chart_fig=None,
     map_png: bytes | None = None,
+    lang: str = "de",
 ) -> str:
     cdi_colour = CDI_COLOURS.get(report.cdi, "#cccccc")
-    cdi_label = CDI_LABELS.get(report.cdi, "Unbekannt")
-    mode_label = "Behoerdenbriefing" if doc.mode == "behoerden" else "Mein Trockenheitsbulletin"
+    cdi_label = get_cdi_labels(lang).get(report.cdi, t("unknown", lang))
+    region_name = get_region_names(lang).get(report.region_id, report.region_name_de)
+    doc_title = t("export_doc_title", lang)
+    mode_label = t("mode_behoerden", lang) if doc.mode == "behoerden" else t("mode_bulletin", lang)
 
     def fmt(v, fmt_str=".1f", fallback="--"):
         try:
@@ -74,40 +78,39 @@ def to_html(
     )
 
     html = f"""<!DOCTYPE html>
-<html lang="de">
+<html lang="{lang}">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>{mode_label}: {report.region_name_de}</title>
+<title>{doc_title}: {region_name}</title>
 <style>{_CSS}</style>
 </head>
 <body>
 <div class="page">
-  <h1>{mode_label}: Trockenheit - {report.region_name_de}</h1>
+  <h1>{mode_label}: {doc_title} - {region_name}</h1>
   <div class="subtitle">Kanton Bern - Datenstand: {report.data_timestamp.strftime("%d.%m.%Y")} - Quelle: {report.source}</div>
 
   <div class="cdi-badge" style="background:{cdi_colour}">CDI {report.cdi} - {cdi_label}</div>
 
   <div class="indicators">
     <div class="indicator">
-      <div class="label">SPI-3m</div>
+      <div class="label">{t("export_metric_spi", lang)}</div>
       <div class="value">{fmt(report.spi_3m, ".2f")}</div>
       <div class="delta">{delta_arrow(report.spi_3m_delta)}/Woche</div>
     </div>
     <div class="indicator">
-      <div class="label">Bodenfeuchte</div>
+      <div class="label">{t("export_metric_soil", lang)}</div>
       <div class="value">{fmt(report.soil_moisture_pct, ".0f")}%</div>
-      <div class="delta">nFK - {report.spi_3m_percentile}. Perz.</div>
+      <div class="delta">{report.spi_3m_percentile}. Perz.</div>
     </div>
     <div class="indicator">
-      <div class="label">VHI</div>
+      <div class="label">{t("export_metric_vhi", lang)}</div>
       <div class="value">{fmt(report.vhi, ".1f")}</div>
       <div class="delta">{delta_arrow(report.vhi_delta)}</div>
     </div>
     <div class="indicator">
-      <div class="label">% krit. Wochen</div>
+      <div class="label">{t("export_metric_critical", lang)}</div>
       <div class="value">{report.pct_critical * 100:.0f}%</div>
-      <div class="delta">letzte 52 Wochen</div>
     </div>
   </div>
 
@@ -117,27 +120,27 @@ def to_html(
   </div>
 
   <div class="section">
-    <h2>Lage</h2>
+    <h2>{t("export_section_lage", lang)}</h2>
     <p>{doc.sections["lage"]}</p>
   </div>
   <div class="section">
-    <h2>Entwicklung</h2>
+    <h2>{t("export_section_entwicklung", lang)}</h2>
     <p>{doc.sections["entwicklung"]}</p>
   </div>
   <div class="section">
-    <h2>Einordnung</h2>
+    <h2>{t("export_section_einordnung", lang)}</h2>
     <p>{doc.sections["einordnung"]}</p>
   </div>
   <div class="section">
-    <h2>Datengrundlage</h2>
+    <h2>{t("export_section_datengrundlage", lang)}</h2>
     <p>{doc.sections["datengrundlage"]}</p>
   </div>
 
   <div class="quality-bar">
-    <strong>Qualitaet:</strong>
+    <strong>Qualität:</strong>
     <span style="color:{quality_colour}">● {report.quality.overall.upper()}</span>
-    &nbsp;|&nbsp; Aktualitaet: {report.quality.data_age_days} Tage
-    &nbsp;|&nbsp; Abdeckung: {report.quality.coverage_pct:.0%}
+    &nbsp;|&nbsp; {t("export_quality_age", lang)}: {report.quality.data_age_days} Tage
+    &nbsp;|&nbsp; {t("export_quality_coverage", lang)}: {report.quality.coverage_pct:.0%}
     {(" &nbsp;|&nbsp; Ausreisser: " + ", ".join(report.quality.outlier_flags)) if report.quality.outlier_flags else ""}
     {(" &nbsp;|&nbsp; Fehlend: " + ", ".join(report.quality.missing_columns)) if report.quality.missing_columns else ""}
   </div>
