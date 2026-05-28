@@ -171,24 +171,26 @@ handlungsempfehlungen:
 lead:
   warnstufe:
     headline:
-      de: "{{ warnkarte.info_de }}, Stufe {{ warnkarte.warnlevel }}"
-      fr: "{{ warnkarte.info_fr }}, niveau {{ warnkarte.warnlevel }}"
-      it: "{{ warnkarte.info_it }}, livello {{ warnkarte.warnlevel }}"
+      de: "{{ canton.max_warnlevel_info_de }}, Stufe {{ canton.max_warnlevel }}"
+      fr: "{{ canton.max_warnlevel_info_fr }}, niveau {{ canton.max_warnlevel }}"
     meta:
-      de: "Gültig ab {{ format_date(warnkarte.valid_from, 'DD.MM.YYYY') }}"
-      fr: "Valable à partir du {{ format_date(warnkarte.valid_from, 'DD.MM.YYYY') }}"
-      it: "Valido dal {{ format_date(warnkarte.valid_from, 'DD.MM.YYYY') }}"
+      de: "Gültig ab {{ format_date(canton.data_timestamp, 'DD.MM.YYYY') }}"
+      fr: "Valable à partir du {{ format_date(canton.data_timestamp, 'DD.MM.YYYY') }}"
     farben_pro_stufe:
       1: { hintergrund: "#6bbd50", text: "#ffffff", label: "grün" }
       2: { hintergrund: "#f7e84c", text: "#1a1a1a", label: "gelb" }
       3: { hintergrund: "#ff8c00", text: "#ffffff", label: "orange" }
       4: { hintergrund: "#e02020", text: "#ffffff", label: "rot" }
       5: { hintergrund: "#8b0000", text: "#ffffff", label: "dunkelrot" }
-    placeholders:
-      - id: warnkarte_lead
-        source: warnkarte
-        fetched_from: data_sources.warnkarte
-        description: "Provides warnlevel, info_de/fr/it and valid_from for the lead block."
+    maps:
+      - id: cdi_current
+        title: { de: "Aktueller CDI", fr: "CDI actuel" }
+        source: "canton.regions[*].cdi"
+        style: "choropleth_warnregionen"
+      - id: cdi_forecast_week2
+        title: { de: "CDI-Prognose Woche 2", fr: "Prévision CDI semaine 2" }
+        source: "canton.regions[*].cdi_forecast_week2"
+        style: "choropleth_warnregionen"
 
 # ---------------------------------------------------------------------------
 # Report sections. Placeholders in {{ ... }} are resolved at render time.
