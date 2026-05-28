@@ -1,10 +1,12 @@
 # tests/test_i18n.py
-from config.settings import BERNE_REGION_NAMES_FR, CDI_LABELS_FR
+from config.settings import CDI_LABELS_FR
+from src.i18n.strings import get_region_names
 
 
 def test_fr_region_names_has_all_berne_regions():
-    from config.settings import BERNE_REGION_IDS
-    assert set(BERNE_REGION_NAMES_FR.keys()) == BERNE_REGION_IDS
+    from config.settings import CANTON_TO_REGIONS
+    fr_names = get_region_names("fr")
+    assert set(fr_names.keys()) == CANTON_TO_REGIONS[2]
 
 
 def test_fr_cdi_labels_has_all_levels():
@@ -12,7 +14,8 @@ def test_fr_cdi_labels_has_all_levels():
 
 
 def test_fr_region_34_is_mittelland():
-    assert BERNE_REGION_NAMES_FR[34] == "Mittelland bernois"
+    fr_names = get_region_names("fr")
+    assert fr_names[34] == "Mittelland bernois"
 
 
 def test_fr_cdi_label_0_is_no_drought():

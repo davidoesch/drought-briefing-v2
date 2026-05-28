@@ -99,4 +99,3 @@ class BriefingDocument:
     lead_maps: list = field(default_factory=list)   # list[MapSpec]
     lead_headline: str = ""
     lead_meta: str = ""
-    mode: str = ""   # legacy compatibility; removed in Phase 9

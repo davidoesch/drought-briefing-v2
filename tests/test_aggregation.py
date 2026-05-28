@@ -50,8 +50,8 @@ def test_quality_attached(bundle):
 
 
 def test_all_berne_regions_compute(bundle):
-    from config.settings import BERNE_REGION_IDS
-    for rid in BERNE_REGION_IDS:
+    from config.settings import CANTON_TO_REGIONS
+    for rid in CANTON_TO_REGIONS[2]:
         report = compute_region_report(rid, bundle)
         assert 0 <= report.cdi <= 5
 

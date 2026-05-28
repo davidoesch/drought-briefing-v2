@@ -4,8 +4,6 @@ from typing import Final
 
 DATA_DIR: Final[Path] = Path(__file__).parent.parent / "data"
 
-BERNE_REGION_IDS: Final[frozenset[int]] = frozenset({33, 34, 35, 37, 38, 41})
-
 BERNE_REGION_NAMES: Final[dict[int, str]] = {
     33: "Unteres Emmental",
     34: "Berner Mittelland",
@@ -13,15 +11,6 @@ BERNE_REGION_NAMES: Final[dict[int, str]] = {
     37: "Oberaargau",
     38: "Oberes Emmental",
     41: "Östliches Berner Oberland",
-}
-
-BERNE_REGION_NAMES_FR: Final[dict[int, str]] = {
-    33: "Basse-Emmental",
-    34: "Mittelland bernois",
-    35: "Oberland bernois occidental",
-    37: "Haute-Argovie",
-    38: "Haute-Emmental",
-    41: "Oberland bernois oriental",
 }
 
 CDI_LABELS: Final[dict[int, str]] = {
@@ -70,7 +59,7 @@ GEOJSON_FIXTURE: Final[Path] = DATA_DIR / "berne_warnregionen.geojson"
 # Bern is the launch canton. Other cantons will be added when their
 # canton→regions mapping is curated.
 CANTON_TO_REGIONS: Final[dict[int, frozenset[int]]] = {
-    2: BERNE_REGION_IDS,  # Bern (BFS canton ID 2)
+    2: frozenset({33, 34, 35, 37, 38, 41}),  # Bern (BFS canton ID 2)
 }
 
 CANTON_NAMES: Final[dict[int, dict[str, str]]] = {
