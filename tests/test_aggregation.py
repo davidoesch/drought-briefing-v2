@@ -57,3 +57,35 @@ def test_canton_to_regions_bern():
     assert CANTON_TO_REGIONS[2] == frozenset({33, 34, 35, 37, 38, 41})
     assert CANTON_NAMES[2]["de"] == "Bern"
     assert CANTON_NAMES[2]["fr"] == "Berne"
+
+
+from datetime import datetime as _dt
+
+from src.data.stac_client import load as load_data
+from src.models import WarnkarteEntry
+
+
+def test_region_report_has_new_fields_from_fixture():
+    bundle = load_data()
+    warnkarte = {
+        34: WarnkarteEntry(
+            drought_region_id=34,
+            warnlevel=2,
+            info_de="Mässige Gefahr",
+            info_fr="Danger limité",
+            info_it="Pericolo moderato",
+            valid_from=_dt(2026, 5, 28),
+        )
+    }
+    report = compute_region_report(34, bundle, warnkarte_entry=warnkarte[34])
+
+    assert report.warnlevel == 2
+    assert report.warnlevel_info_de == "Mässige Gefahr"
+    assert report.warnlevel_info_fr == "Danger limité"
+    assert report.precip_sum_1m >= 0.0
+    assert report.precip_sum_3m >= 0.0
+    assert 1 <= report.precip_1m_index <= 5
+    assert 1 <= report.soil_moisture_index <= 5
+    assert 1 <= report.hydro_index <= 5
+    # Forecast week 2 may be None if data is shorter than 14 days
+    assert report.cdi_forecast_week2 is None or 1 <= report.cdi_forecast_week2 <= 5

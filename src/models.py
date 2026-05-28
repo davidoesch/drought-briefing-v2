@@ -1,6 +1,6 @@
 # src/models.py
 from __future__ import annotations
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Literal
 import pandas as pd
@@ -13,6 +13,7 @@ class DataBundle:
     reference_df: pd.DataFrame
     data_timestamp: datetime
     source: Literal["api", "fixture"]
+    forecast_df: pd.DataFrame = field(default_factory=pd.DataFrame)
 
 
 @dataclass
