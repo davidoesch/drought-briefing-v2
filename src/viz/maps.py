@@ -75,7 +75,11 @@ def build_canton_map(canton: CantonReport, map_spec: MapSpec) -> folium.Map:
 def _build_folium_choropleth(values: dict[int, int]) -> folium.Map:
     """Render a values dict {region_id: cdi} as a folium choropleth using the bundled GeoJSON."""
     geo = json.loads(GEOJSON_FIXTURE.read_text())
-    m = folium.Map(location=[46.8, 7.4], zoom_start=8, tiles="cartodbpositron")
+    m = folium.Map(
+        location=[46.80, 7.55],
+        zoom_start=9,
+        tiles="CartoDB dark_matter",
+    )
 
     def style_fn(feature):
         rid = int(feature["properties"]["drought_region_id"])
