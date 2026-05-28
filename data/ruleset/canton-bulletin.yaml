@@ -145,28 +145,38 @@ trend:
 # these fall back to the next lower level (3 -> 2, 5 -> 4).
 # ---------------------------------------------------------------------------
 handlungsempfehlungen:
-  source_ref: references.handlungsempfehlungen_bafu   # single source of truth: see references block above
+  source_ref: references.handlungsempfehlungen_bafu
   by_gefahrenstufe:
     1:
       empfehlungen:
         de:
           - "Es sind keine besonderen Massnahmen zur Vorbeugung von Trockenheit erforderlich."
+        fr:
+          - "Aucune mesure particulière n'est nécessaire pour prévenir la sécheresse."
     2:
       empfehlungen:
         de:
           - "Informieren Sie sich auf www.trockenheit.ch über die aktuelle Lage in Ihrer Region."
           - "Informieren Sie sich über mögliche Einschränkungen der Wassernutzung."
           - "Gehen Sie sparsam mit den Wasserressourcen um."
+        fr:
+          - "Informez-vous sur www.trockenheit.ch sur la situation actuelle dans votre région."
+          - "Informez-vous sur les éventuelles restrictions d'utilisation de l'eau."
+          - "Utilisez les ressources en eau avec parcimonie."
     3:
-      fallback: 2   # BAFU does not publish dedicated recommendations for level 3
+      fallback: 2
     4:
       empfehlungen:
         de:
           - "Informieren Sie sich über mögliche Anweisungen der lokalen Behörden betreffend Verbote und Einschränkungen der Wassernutzung und beachten Sie diese."
           - "Gehen Sie sparsam mit den Wasserressourcen um."
           - "Halten Sie sich an die Anweisungen und Verbote der lokalen Behörden bezüglich Waldbrandgefahr."
+        fr:
+          - "Informez-vous sur les éventuelles consignes des autorités locales concernant les interdictions et restrictions d'utilisation de l'eau et respectez-les."
+          - "Utilisez les ressources en eau avec parcimonie."
+          - "Respectez les consignes et interdictions des autorités locales concernant les risques d'incendie de forêt."
     5:
-      fallback: 4   # BAFU does not publish dedicated recommendations for level 5
+      fallback: 4
 
 # ---------------------------------------------------------------------------
 # Lead block: current warning level as a coloured box directly below the title.
