@@ -168,6 +168,6 @@ with export_placeholder:
     st.download_button(
         label=t("btn_html", lang),
         data=html_str.encode("utf-8"),
-        file_name=f"trockenheit_{report.region_name_de.replace(' ', '_')}_{report.data_timestamp.strftime('%Y%m%d')}.html",
+        file_name=f"trockenheit_{get_region_names(lang).get(report.region_id, report.region_name_de).replace(' ', '_')}_{report.data_timestamp.strftime('%Y%m%d')}.html",
         mime="text/html",
     )
