@@ -2,6 +2,7 @@
 """One Click Drought Briefing — Streamlit entry point for Kanton Bern."""
 from __future__ import annotations
 
+import math
 import streamlit as st
 from streamlit_folium import st_folium
 
@@ -96,7 +97,9 @@ with c2:
     st.metric("Bodenfeuchte (% nFK)", f"{report.soil_moisture_pct:.0f}%",
               help=f"{report.spi_3m_percentile}. Perzentil (Ref. 1961–2020)")
 with c3:
-    st.metric("VHI", f"{report.vhi:.1f}", delta=f"{report.vhi_delta:+.1f}")
+    vhi_val = f"{report.vhi:.1f}" if not math.isnan(report.vhi) else "–"
+    vhi_delta_str = f"{report.vhi_delta:+.1f}" if not math.isnan(report.vhi_delta) else None
+    st.metric("VHI", vhi_val, delta=vhi_delta_str)
 with c4:
     st.metric("% krit. Wochen", f"{report.pct_critical * 100:.0f}%",
               help="Anteil Wochen mit CDI ≥ 3 in den letzten 52 Wochen")

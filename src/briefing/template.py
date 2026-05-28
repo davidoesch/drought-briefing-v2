@@ -1,6 +1,7 @@
 # src/briefing/template.py
 from __future__ import annotations
 
+import math
 from datetime import datetime
 
 from config.settings import CDI_LABELS
@@ -11,6 +12,11 @@ from src.briefing.text_blocks import (
     LAGE_BLOCKS,
 )
 from src.models import BriefingDocument, RegionReport
+
+
+def _safe_num(val: float, default: float = 0.0) -> float:
+    """Replace NaN with a safe default for string formatting."""
+    return val if not math.isnan(val) else default
 
 _TREND_LABELS: dict[int, dict[str, str]] = {
     -1: {"behoerden": "verbessernd", "bulletin": "verbessert"},
@@ -27,8 +33,8 @@ def _format_kwargs(report: RegionReport, mode: str) -> dict:
         "spi_3m":            report.spi_3m,
         "spi_3m_delta":      report.spi_3m_delta,
         "soil_moisture_pct": report.soil_moisture_pct,
-        "vhi":               report.vhi,
-        "vhi_delta":         report.vhi_delta,
+        "vhi":               _safe_num(report.vhi),
+        "vhi_delta":         _safe_num(report.vhi_delta),
         "pct_critical_pct":  report.pct_critical * 100,
         "spi_3m_percentile": report.spi_3m_percentile,
         "data_timestamp":    report.data_timestamp.strftime("%d.%m.%Y"),
