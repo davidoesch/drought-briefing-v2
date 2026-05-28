@@ -86,7 +86,7 @@ def build_export_map(
         cx = row["geometry"].centroid.x
         cy = row["geometry"].centroid.y
         name = BERNE_REGION_NAMES.get(row["drought_region_id"], "")
-        short_name = name.replace("Berner ", "").replace("Westliches ", "W.").replace("Oestliches ", "O.")
+        short_name = name.replace("Berner ", "").replace("Westliches ", "W.").replace("Östliches ", "Ö.")
         ax.text(cx, cy, f"{short_name}\nCDI {row['cdi']}", ha="center", va="center",
                 fontsize=5, color="white", fontweight="bold")
 

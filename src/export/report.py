@@ -65,9 +65,9 @@ def to_html(
 
     def delta_arrow(v):
         if v > 0:
-            return f"+ {v:+.2f}"
+            return f"+{v:.2f}"
         if v < 0:
-            return f"- {abs(v):.2f}"
+            return f"-{abs(v):.2f}"
         return "0.00"
 
     chart_html = ""
