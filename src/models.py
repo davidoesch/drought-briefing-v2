@@ -44,6 +44,16 @@ class RegionReport:
 
 
 @dataclass
+class WarnkarteEntry:
+    drought_region_id: int
+    warnlevel: int          # 1-5 (BAFU Gefahrenstufe)
+    info_de: str
+    info_fr: str
+    info_it: str
+    valid_from: datetime
+
+
+@dataclass
 class MapSpec:
     id: str
     title_de: str
