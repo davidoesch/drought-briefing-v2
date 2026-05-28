@@ -1,10 +1,13 @@
 # src/briefing/renderer.py
 from __future__ import annotations
 
+import logging
 import re
 from datetime import datetime
 from pathlib import Path
 from typing import Literal
+
+logger = logging.getLogger(__name__)
 
 import yaml
 from jinja2 import BaseLoader, Environment, StrictUndefined
@@ -48,10 +51,46 @@ def _format_date(value: datetime | str, pattern: str) -> str:
     if isinstance(value, str):
         value = datetime.fromisoformat(value)
     mapping = {
-        "DD.MM.YYYY": value.strftime("%d.%m.%Y"),
-        "YYYY-MM-DD": value.strftime("%Y-%m-%d"),
+        "DD.MM.YYYY": "%d.%m.%Y",
+        "YYYY-MM-DD": "%Y-%m-%d",
     }
-    return mapping.get(pattern, value.strftime(pattern))
+    if pattern not in mapping:
+        raise ValueError(f"Unsupported date pattern: {pattern!r}. Known: {sorted(mapping)}")
+    return value.strftime(mapping[pattern])
+
+
+def _resolve_handlungsempfehlungen_fallback(spec):
+    """
+    Return a copy of the by_gefahrenstufe dict where fallback levels are replaced
+    by the empfehlungen of their target level (chain-resolved).
+    """
+    resolved = {}
+    for level, entry in spec.by_gefahrenstufe.items():
+        current = entry
+        # Follow fallback chain until we find one with empfehlungen
+        seen = set()
+        while current.empfehlungen is None and current.fallback is not None:
+            if current.fallback in seen:
+                raise ValueError(f"Cyclic fallback chain at level {level}")
+            seen.add(current.fallback)
+            current = spec.by_gefahrenstufe[current.fallback]
+        if current.empfehlungen is None:
+            raise ValueError(f"Level {level} has no empfehlungen and no resolvable fallback")
+        resolved[level] = current
+    return resolved
+
+
+def _pick_template(template, locale: str, section_id: str) -> str:
+    if isinstance(template, str):
+        return template
+    if locale in template:
+        return template[locale]
+    if "de" in template:
+        logger.warning(
+            "Section %s missing locale=%r; falling back to 'de'", section_id, locale
+        )
+        return template["de"]
+    raise ValueError(f"Section {section_id} has no usable template for locale={locale!r}")
 
 
 def _make_trend_resolver(trend_spec, locale: str):
@@ -77,7 +116,12 @@ def render_briefing(
     env.globals["format_date"] = _format_date
     env.globals["trend"] = _make_trend_resolver(ruleset.trend, locale)
     env.globals["nomenclature"] = ruleset.nomenclature.indicators
-    env.globals["handlungsempfehlungen"] = ruleset.handlungsempfehlungen
+    # Resolve fallback chains so the template never sees None.empfehlungen
+    resolved_he = type(ruleset.handlungsempfehlungen).model_construct(
+        source_ref=ruleset.handlungsempfehlungen.source_ref,
+        by_gefahrenstufe=_resolve_handlungsempfehlungen_fallback(ruleset.handlungsempfehlungen),
+    )
+    env.globals["handlungsempfehlungen"] = resolved_he
     env.globals["canton"] = canton
     # Expose data_sources and references as lists so Handlebars-style each loops work
     env.globals["data_sources"] = list(ruleset.data_sources.values())
@@ -85,10 +129,7 @@ def render_briefing(
 
     sections: dict[str, str] = {}
     for sec in ruleset.sections:
-        if isinstance(sec.template, str):
-            tmpl_src = sec.template
-        else:
-            tmpl_src = sec.template.get(locale, sec.template.get("de", ""))
+        tmpl_src = _pick_template(sec.template, locale, sec.id)
         tmpl_src = _handlebars_to_jinja2(tmpl_src)
         sections[sec.id] = env.from_string(tmpl_src).render().strip()
 
