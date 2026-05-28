@@ -2,8 +2,6 @@
 """One Click Drought Briefing — Streamlit entry point for Kanton Bern."""
 from __future__ import annotations
 
-import logging
-import math
 from pathlib import Path
 import streamlit as st
 
