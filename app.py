@@ -131,13 +131,19 @@ with st.expander(t("quality_expander", lang)):
     q_colour = {"ok": "🟢", "warning": "🟡", "error": "🔴"}.get(q.overall, "⚪")
     st.markdown(
         f"{q_colour} **{q.overall.upper()}** — "
-        f"{t('data_age', lang)}: {q.data_age_days} Tage — "
+        f"{t('data_age', lang)}: {q.data_age_days} {t('days', lang)} — "
         f"{t('coverage', lang)}: {q.coverage_pct:.0%}"
     )
     if q.missing_columns:
         st.warning(f"{t('quality_missing_cols', lang)}: {', '.join(q.missing_columns)}")
     if q.outlier_flags:
         st.warning(f"{t('quality_outliers', lang)}: {', '.join(q.outlier_flags)}")
+    # Per-region drill-down
+    for r in canton.regions:
+        st.caption(
+            f"R{r.region_id} ({r.region_name_de}): "
+            f"{r.quality.overall} — coverage {r.quality.coverage_pct:.0%}"
+        )
 
 # ── Export buttons ─────────────────────────────────────────────────────────
 with export_placeholder:
