@@ -158,7 +158,7 @@ elif view_tab == "regions":
 
     regionen_sec = next((s for s in rs.sections if s.id == "regionen"), None)
     col_allg_lage = regionen_sec.title.get(lang, "Allgemeine Lage") if regionen_sec else "Allgemeine Lage"
-    col_expert = "Experteneinschätzung" if lang == "de" else "Évaluation d'expert"
+    col_expert = t("col_canton_recs", lang)
     
     # Render Table Header using Streamlit Columns
     h_col1, h_col2, h_col3, h_col4, h_col5 = st.columns([1, 1.5, 2.5, 3.5, 2.5])
@@ -220,12 +220,12 @@ elif view_tab == "regions":
                 st.session_state.expert_notes[key] = st.session_state[f"widget_{key}"]
 
             st.text_area(
-                "Expert Input", 
+                t("expert_input_label", lang), 
                 value=current_val, 
                 key=f"widget_{expert_key}", 
                 label_visibility="collapsed",
                 on_change=update_note,
-                placeholder="Einschätzung hier eingeben..."
+                placeholder=t("expert_input_placeholder", lang)
             )
             
         st.markdown("<hr style='margin-top: 10px; margin-bottom: 10px; border-top: 1px solid #eee;'/>", unsafe_allow_html=True)
