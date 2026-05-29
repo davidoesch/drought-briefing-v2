@@ -6,7 +6,7 @@ from datetime import datetime, timedelta
 
 import pandas as pd
 
-from config.settings import BERNE_REGION_NAMES
+from config.settings import REGION_NAMES_DE
 from src.aggregation.indicators import compute_pct_critical, compute_percentile, compute_trend
 from src.models import DataBundle, RegionReport, WarnkarteEntry
 from src.quality.checks import run_quality_checks
@@ -98,7 +98,7 @@ def compute_region_report(
 
     return RegionReport(
         region_id=region_id,
-        region_name_de=BERNE_REGION_NAMES.get(region_id, f"Region {region_id}"),
+        region_name_de=REGION_NAMES_DE.get(region_id, f"Region {region_id}"),
         data_timestamp=bundle.data_timestamp,
         source=bundle.source,
         cdi=cdi,

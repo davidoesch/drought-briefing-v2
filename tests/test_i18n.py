@@ -3,10 +3,12 @@ from config.settings import CDI_LABELS_FR
 from src.i18n.strings import get_region_names
 
 
-def test_fr_region_names_has_all_berne_regions():
-    from config.settings import CANTON_TO_REGIONS
+def test_fr_region_names_covers_all_38_regions():
     fr_names = get_region_names("fr")
-    assert set(fr_names.keys()) == CANTON_TO_REGIONS[2]
+    assert len(fr_names) == 38
+    # Bern regions still present with correct French names
+    assert fr_names[34] == "Mittelland bernois"
+    assert fr_names[41] == "Oberland bernois oriental"
 
 
 def test_fr_cdi_labels_has_all_levels():

@@ -5,16 +5,9 @@ from config.settings import (
     BERNE_REGION_NAMES,
     CDI_LABELS,
     CDI_LABELS_FR,
+    REGION_NAMES_DE,
+    REGION_NAMES_FR,
 )
-
-_BERNE_REGION_NAMES_FR: dict[int, str] = {
-    33: "Basse-Emmental",
-    34: "Mittelland bernois",
-    35: "Oberland bernois occidental",
-    37: "Haute-Argovie",
-    38: "Haute-Emmental",
-    41: "Oberland bernois oriental",
-}
 
 UI_STRINGS: dict[str, dict[str, str]] = {
     "de": {
@@ -157,4 +150,4 @@ def get_cdi_labels(lang: str) -> dict[int, str]:
 
 
 def get_region_names(lang: str) -> dict[int, str]:
-    return _BERNE_REGION_NAMES_FR if lang == "fr" else BERNE_REGION_NAMES
+    return REGION_NAMES_FR if lang == "fr" else REGION_NAMES_DE

@@ -37,6 +37,55 @@ BERNE_REGION_NAMES: Final[dict[int, str]] = {
     41: "Östliches Berner Oberland",
 }
 
+# German names for all 38 Swiss drought warning regions, derived from JSON.
+REGION_NAMES_DE: Final[dict[int, str]] = {
+    r["REGION_NR"]: r["Name"]
+    for entry in _KANTONE
+    for r in entry["warnregionen"]
+}
+
+# French names for all 38 Swiss drought warning regions.
+REGION_NAMES_FR: Final[dict[int, str]] = {
+    31: "Jura oriental",
+    32: "Balsthal",
+    33: "Basse-Emmental",
+    34: "Mittelland bernois",
+    35: "Oberland bernois occidental",
+    36: "Pays de Gruyère",
+    37: "Haute-Argovie",
+    38: "Haute-Emmental",
+    39: "Freiamt",
+    40: "Suisse centrale occidentale",
+    41: "Oberland bernois oriental",
+    42: "Moyen Pays oriental",
+    43: "Bassin du lac de Zurich",
+    44: "Suisse centrale orientale",
+    45: "Alpes uranaises",
+    46: "Surselva",
+    47: "Alpstein",
+    48: "Alpes de Glaris",
+    49: "Grisons centraux nord",
+    50: "Grisons centraux sud",
+    51: "Vallée du Rhin",
+    52: "Prättigau",
+    53: "Franches-Montagnes",
+    54: "Jura occidental",
+    55: "Moyen Pays occidental",
+    56: "Bassin lémanique",
+    57: "Chablais",
+    58: "Alpes valaisannes méridionales",
+    59: "Valais septentrional",
+    60: "Vallées de Viège",
+    61: "Conches",
+    62: "Tessin occidental",
+    63: "Tessin septentrional",
+    64: "Tessin oriental",
+    65: "Sottoceneri",
+    66: "Vallées méridionales des Grisons",
+    67: "Haute-Engadine",
+    68: "Basse-Engadine",
+}
+
 CDI_LABELS: Final[dict[int, str]] = {
     0: "Keine Trockenheit",
     1: "Leichte Trockenheit",
