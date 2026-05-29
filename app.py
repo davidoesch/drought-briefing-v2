@@ -51,10 +51,6 @@ def _warnstufe_palette(level: int) -> tuple[str, str]:
 
 # ── Sidebar ────────────────────────────────────────────────────────────────
 with st.sidebar:
-    st.title(t("sidebar_title", lang))
-    st.caption(t("sidebar_caption", lang))
-    st.divider()
-
     lang = st.radio(
         "Sprache / Langue",
         options=["de", "fr"],
@@ -62,6 +58,10 @@ with st.sidebar:
         horizontal=True,
         index=0,
     )
+
+    st.title(t("sidebar_title", lang))
+    st.caption(t("sidebar_caption", lang))
+    st.divider()
 
     canton_options = sorted(CANTON_TO_REGIONS.keys())
     selected_canton_id = st.selectbox(
