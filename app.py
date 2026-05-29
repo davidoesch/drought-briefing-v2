@@ -229,18 +229,18 @@ elif view_tab == "regions":
                 
                 hydro_lines.append(
                     f"<b>{hs.station_name} ({hs.station_id})</b><br/>" 
-                    f"<span style='color:#555; font-size:13px; line-height: 1.3;'>"
+                    f"<span style='opacity: 0.8; font-size:13px; line-height: 1.3;'>"
                     f"Abfluss: {val_str}<br/>"
                     f"T1: {t1_str} | Min: {min_str}"
                     f"</span>"
                 )
             situation = "<br/><br/>".join(hydro_lines)
         else:
-            situation = "<span style='color:#999; font-size: 13px;'>Keine Stationen/Daten</span>"
+            situation = "<span style='opacity: 0.5; font-size: 13px;'>Keine Stationen/Daten</span>"
         
         # 4. Allgemeine Lage (Narrative)
         narrative_text = regional_narratives.get(r.region_name_de, "–")
-        narrative_html = f"<span style='font-size: 14px; color: #333; line-height: 1.4;'>{narrative_text}</span>"
+        narrative_html = f"<span style='font-size: 14px; opacity: 0.9; line-height: 1.4;'>{narrative_text}</span>"
 
         with c1:
             st.markdown(badge, unsafe_allow_html=True)
@@ -270,7 +270,7 @@ elif view_tab == "regions":
                 placeholder=t("expert_input_placeholder", lang)
             )
             
-        st.markdown("<hr style='margin-top: 10px; margin-bottom: 10px; border-top: 1px solid #eee;'/>", unsafe_allow_html=True)
+        st.markdown("<hr style='margin-top: 10px; margin-bottom: 10px; opacity: 0.2;'/>", unsafe_allow_html=True)
 
 # ── Global Footer (Applies to both tabs) ───────────────────────────────────
 st.divider()
