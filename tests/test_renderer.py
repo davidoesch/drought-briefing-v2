@@ -35,6 +35,25 @@ def test_handlebars_no_each_unchanged():
     assert _handlebars_to_jinja2(src) == src
 
 
+def test_handlebars_if_block_converted():
+    src = "{{#if x.n}}has{{/if}}"
+    out = _handlebars_to_jinja2(src)
+    assert "{% if x.n %}" in out
+    assert "{% endif %}" in out
+
+
+def test_deficit_range_helper_via_ruleset():
+    from src.briefing.renderer import _make_deficit_range_resolver
+    rs = load_ruleset(RULESET_PATH)
+    fn = _make_deficit_range_resolver(rs.nomenclature.indicators, "de")
+    assert fn(None, None, "cdi") == ""
+    # single (min == max) uses the `single` template
+    assert "trocken" in fn(3, 3, "cdi")
+    # range uses adjectives + range template
+    out = fn(2, 4, "niederschlag")
+    assert "bis" in out and "Niederschlagsdefizit" in out
+
+
 # ---------------------------------------------------------------------------
 # Shared fixtures
 # ---------------------------------------------------------------------------

@@ -39,6 +39,8 @@ class NomenclatureIndicatorSpec(BaseModel):
     note: str | None = None
     adjective: dict[int, dict[str, str]] | None = None
     noun: dict[int, dict[str, str]] | None = None
+    range: dict[str, str] | None = None
+    single: dict[str, str] | None = None
     model_config = ConfigDict(extra="forbid")
 
 
@@ -65,6 +67,18 @@ class HandlungsempfehlungenLevel(BaseModel):
 class HandlungsempfehlungenSpec(BaseModel):
     source_ref: str
     by_gefahrenstufe: dict[int, HandlungsempfehlungenLevel]
+    model_config = ConfigDict(extra="forbid")
+
+
+class BannerLinkSpec(BaseModel):
+    label: dict[str, str]
+    url: str
+    model_config = ConfigDict(extra="forbid")
+
+
+class WeiterfuehrendeLinkSpec(BaseModel):
+    label: dict[str, str]
+    url: str | dict[int, str]   # plain url, or canton-id-keyed url map
     model_config = ConfigDict(extra="forbid")
 
 
@@ -113,4 +127,6 @@ class RulesetSchema(BaseModel):
     handlungsempfehlungen: HandlungsempfehlungenSpec
     lead: LeadSpec
     sections: list[SectionSpec]
+    banner: list[BannerLinkSpec] | None = None
+    weiterfuehrende_links: list[WeiterfuehrendeLinkSpec] | None = None
     model_config = ConfigDict(extra="forbid")
