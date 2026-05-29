@@ -19,7 +19,12 @@
     "pandas",
     "plotly",
     "folium",
-    "streamlit-folium" 
+    "streamlit-folium",
+    "pyyaml",
+    "jinja2",
+    "pydantic",
+    "geopandas",
+    "matplotlib"
     ],
         entrypoint: "app.py",
         files: {
@@ -29,9 +34,12 @@
           "src/__init__.py":                     { url: "./src/__init__.py" },
           "src/models.py":                       { url: "./src/models.py" },
           "src/aggregation/__init__.py":         { url: "./src/aggregation/__init__.py" },
+          "src/aggregation/canton.py":       { url: "./src/aggregation/canton.py" },
           "src/aggregation/indicators.py":       { url: "./src/aggregation/indicators.py" },
           "src/aggregation/regional.py":         { url: "./src/aggregation/regional.py" },
           "src/briefing/__init__.py":            { url: "./src/briefing/__init__.py" },
+          "src/briefing/renderer.py":            { url: "./src/briefing/renderer.py" },
+          "src/briefing/schemas.py":             { url: "./src/briefing/schemas.py" },
           "src/briefing/template.py":            { url: "./src/briefing/template.py" },
           "src/briefing/text_blocks_de.py":      { url: "./src/briefing/text_blocks_de.py" },
           "src/briefing/text_blocks_fr.py":      { url: "./src/briefing/text_blocks_fr.py" },
@@ -40,6 +48,7 @@
           "src/data/__init__.py":                { url: "./src/data/__init__.py" },
           "src/data/fixture_loader.py":          { url: "./src/data/fixture_loader.py" },
           "src/data/stac_client.py":             { url: "./src/data/stac_client.py" },
+          "src/data/warnkarte_client.py":        { url: "./src/data/warnkarte_client.py" },
           "src/export/__init__.py":              { url: "./src/export/__init__.py" },
           "src/export/report.py":               { url: "./src/export/report.py" },
           "src/quality/__init__.py":             { url: "./src/quality/__init__.py" },
@@ -49,6 +58,10 @@
           "src/viz/maps.py":                     { url: "./src/viz/maps.py" },
           "data/berne_warnregionen.geojson":
             { url: "./data/berne_warnregionen.geojson" },
+          "data/ruleset/canton-bulletin.yaml":
+            { url: "./data/ruleset/canton-bulletin.yaml" },
+          "data/warnkarte_fixture.json":
+            { url: "./data/warnkarte_fixture.json" },
           "data/trockenheitsdaten-numerisch_current__trockenheitsdaten-numerisch_current.csv.zip":
             { url: "./data/trockenheitsdaten-numerisch_current__trockenheitsdaten-numerisch_current.csv.zip" },
           "data/trockenheitsdaten-numerisch_historic__trockenheitsdaten-numerisch_historic.csv.zip":
