@@ -54,10 +54,8 @@ def build_timeseries(historic_df: pd.DataFrame, region_id: int, lang: str = "de"
         legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
         height=350,
         margin=dict(l=40, r=40, t=60, b=40),
-        plot_bgcolor="#0d1117",
-        paper_bgcolor="#0d1117",
-        font_color="#c9d1d9",
     )
+    
     fig.update_yaxes(title_text="CDI (0-5)", secondary_y=False, range=[0, 5.5])
     fig.update_yaxes(title_text="SPI-3m", secondary_y=True)
 
