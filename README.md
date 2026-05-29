@@ -10,6 +10,8 @@ Built at [GovTech Hackathon 2026](https://hack.govtech.ch) in partnership with s
 
 ## The Problem
 
+> Challenge here 👉 https://govtech.digisus-lab.ch/project/16
+
 During drought events, cantonal and municipal crisis teams must quickly assess the situation and communicate it in plain language. Today that means manually pulling data from multiple federal portals, interpreting technical indicators, and writing reports by hand — a process that takes hours, produces inconsistent results across cantons, and only happens at all when a federal warning is already active.
 
 ## What We Built
@@ -64,4 +66,4 @@ uv run pytest tests/ -v
 
 ## Team
 
-David Oesch · Joan Sturm · Fabia Huesler · Christopher Boodnee · Lea Stauber · Benjamin Meyer · Luca Huesler
+David Oesch · Joan Sturm · Fabia Huesler · Christopher Boodnee · Lea Stauber · Benjamin Meyer · Luca Huesler · Simon Jaun · Chantal Camenisch
