@@ -80,7 +80,15 @@ def to_html(
                 rbg, rfg = _WARNSTUFE_PALETTE.get(r.warnlevel, ("#cccccc", "#1a1a1a"))
                 badge = f"<div style='background:{rbg}; color:{rfg}; padding:6px; border-radius:6px; text-align:center; font-weight:bold; width:max-content; min-width:30px;'>{r.warnlevel}</div>"
                 
-                name = html.escape(region_names.get(r.region_id, r.region_name_de))
+                name_raw = region_names.get(r.region_id, r.region_name_de)
+                slug = name_raw.lower()
+                slug = slug.replace("ä", "ae").replace("ö", "oe").replace("ü", "ue")
+                slug = slug.replace("é", "e").replace("è", "e").replace("ê", "e")
+                slug = slug.replace("à", "a").replace("â", "a").replace("ç", "c")
+                slug = re.sub(r'[^a-z0-9]+', '-', slug).strip('-')
+                region_url = f"https://www.trockenheit.admin.ch/{doc.locale}/regionen/{r.region_id}-{slug}/aktuelle-lage#index"
+                
+                name_html = f"<a href='{region_url}' target='_blank' style='color: inherit; text-decoration: underline;'>{html.escape(name_raw)}</a>"
                 
                 # New Hydro Station Export
                 if r.hydro_stations:
@@ -111,7 +119,7 @@ def to_html(
                 table_html.append(
                     f"<tr style='border-bottom: 1px solid #eee; vertical-align: top;'>"
                     f"<td style='padding: 16px 8px;'>{badge}</td>"
-                    f"<td style='padding: 16px 8px;'><b>{name}</b></td>"
+                    f"<td style='padding: 16px 8px;'><b>{name_html}</b></td>"
                     f"<td style='padding: 16px 8px; font-size: 14px;'>{situation}</td>"
                     f"<td style='padding: 16px 8px; font-size: 14px; line-height: 1.4;'>{narrative}</td>"
                     f"<td style='padding: 16px 8px; font-size: 14px; line-height: 1.4;'>{expert_val}</td>"

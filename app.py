@@ -225,8 +225,15 @@ elif view_tab == "regions":
         bg, fg = _warnstufe_palette(r.warnlevel)
         badge = f"<div style='background:{bg}; color:{fg}; padding:6px; border-radius:6px; text-align:center; font-weight:bold; width:max-content; min-width:30px;'>{r.warnlevel}</div>"
         
-        # 2. Region Name
+        # 2. Region Name & Link
         name = get_region_names(lang).get(r.region_id, r.region_name_de)
+        
+        slug = name.lower()
+        slug = slug.replace("ä", "ae").replace("ö", "oe").replace("ü", "ue")
+        slug = slug.replace("é", "e").replace("è", "e").replace("ê", "e")
+        slug = slug.replace("à", "a").replace("â", "a").replace("ç", "c")
+        slug = re.sub(r'[^a-z0-9]+', '-', slug).strip('-')
+        region_url = f"https://www.trockenheit.admin.ch/{lang}/regionen/{r.region_id}-{slug}/aktuelle-lage#index"
         
         # 3. Situation (Hydro Station Data)
         if r.hydro_stations:
@@ -254,7 +261,7 @@ elif view_tab == "regions":
         with c1:
             st.markdown(badge, unsafe_allow_html=True)
         with c2:
-            st.markdown(f"**{name}**")
+            st.markdown(f"**[{name}]({region_url})**")
         with c3:
             st.markdown(situation, unsafe_allow_html=True)
         with c4:
