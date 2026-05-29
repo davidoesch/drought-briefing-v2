@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import logging
 import math
+import re
 from pathlib import Path
 import streamlit as st
 
@@ -46,20 +47,6 @@ def _warnstufe_palette(level: int) -> tuple[str, str]:
         5: ("#8b0000", "#ffffff"),
     }
     return palette.get(level, ("#cccccc", "#1a1a1a"))
-
-def _get_recommendations(warnlevel: int, lang: str, rs) -> list[str]:
-    """Resolve recommendations handling fallback chains."""
-    he = rs.handlungsempfehlungen.by_gefahrenstufe
-    current = he.get(warnlevel)
-    seen = set()
-    while current and current.empfehlungen is None and current.fallback is not None:
-        if current.fallback in seen: 
-            break
-        seen.add(current.fallback)
-        current = he.get(current.fallback)
-    if current and current.empfehlungen:
-        return current.empfehlungen.get(lang, [])
-    return []
 
 
 # ── Sidebar ────────────────────────────────────────────────────────────────
@@ -157,14 +144,26 @@ elif view_tab == "regions":
     st.title(f"{t('tab_regions', lang)}: {canton_label}")
     st.divider()
     
+    # Extract narratives from the generated Markdown
+    regional_narratives = {}
+    if "regionen" in doc.sections:
+        # Split by "### <Region Name>"
+        parts = re.split(r'^###\s+(.*)$', doc.sections["regionen"], flags=re.MULTILINE)
+        for i in range(1, len(parts), 2):
+            r_name = parts[i].strip()
+            r_text = parts[i+1].strip().replace('\n', '<br/>')
+            regional_narratives[r_name] = r_text
+
+    regionen_sec = next((s for s in rs.sections if s.id == "regionen"), None)
+    col_allg_lage = regionen_sec.title.get(lang, "Allgemeine Lage") if regionen_sec else "Allgemeine Lage"
+    
     table_html = [
         "<table style='width: 100%; text-align: left; border-collapse: collapse; font-family: sans-serif;'>",
         "<thead><tr style='border-bottom: 2px solid #ddd; background-color: rgba(0,0,0,0.05);'>",
-        f"<th style='padding: 12px 8px;'>{t('col_warnstufe', lang)}</th>",
-        f"<th style='padding: 12px 8px;'>{t('col_region', lang)}</th>",
-        f"<th style='padding: 12px 8px;'>{t('col_situation', lang)}</th>",
-        f"<th style='padding: 12px 8px;'>{t('col_empfehlungen', lang)}</th>",
-        f"<th style='padding: 12px 8px;'>{t('col_link', lang)}</th>",
+        f"<th style='padding: 12px 8px; width: 10%;'>{t('col_warnstufe', lang)}</th>",
+        f"<th style='padding: 12px 8px; width: 15%;'>{t('col_region', lang)}</th>",
+        f"<th style='padding: 12px 8px; width: 25%;'>{t('col_situation', lang)}</th>",
+        f"<th style='padding: 12px 8px; width: 50%;'>{col_allg_lage}</th>",
         "</tr></thead><tbody>"
     ]
 
@@ -176,30 +175,32 @@ elif view_tab == "regions":
         # 2. Region Name
         name = get_region_names(lang).get(r.region_id, r.region_name_de)
         
-        # 3. Situation
+        # 3. Situation (Deep Links)
         cdi_label = get_cdi_labels(lang).get(r.cdi, t("unknown", lang))
         spi_val = f"{r.spi_3m:.2f}" if not math.isnan(r.spi_3m) else "–"
         soil_val = f"{r.soil_moisture_pct:.0f}%" if not math.isnan(r.soil_moisture_pct) else "–"
-        situation = f"<b>CDI {r.cdi} ({cdi_label})</b><br/><span style='color:#555;'>{t('metric_spi', lang)}: {spi_val}<br/>{t('metric_soil', lang)}: {soil_val}</span>"
         
-        # 4. Empfehlungen
-        recs = _get_recommendations(r.warnlevel, lang, rs)
-        if recs:
-            recs_html = "<ul style='margin:0; padding-left:20px; color:#333;'>" + "".join(f"<li style='margin-bottom:6px;'>{item}</li>" for item in recs) + "</ul>"
-        else:
-            recs_html = f"<span style='color:#999;'>—</span>"
-            
-        # 5. Link
-        link_url = f"https://www.trockenheit.admin.ch/{lang}/regionen/{r.region_id}/aktuelle-lage"
-        link_html = f"<a href='{link_url}' target='_blank' style='text-decoration:none; font-weight:600;'>{t('link_details', lang)} ↗</a>"
+        base_url = f"https://www.trockenheit.admin.ch/{lang}/regionen/{r.region_id}/aktuelle-lage"
+        
+        situation = (
+            f"<b><a href='{base_url}' target='_blank' style='text-decoration:none; color:#1a1a1a;'>CDI {r.cdi} ({cdi_label}) ↗</a></b><br/>"
+            f"<span style='color:#555; line-height: 1.5;'>"
+            f"<a href='{base_url}#precipitation' target='_blank' style='text-decoration:none; color:#555;'>{t('metric_spi', lang)}: {spi_val} ↗</a><br/>"
+            f"<a href='{base_url}#moisture' target='_blank' style='text-decoration:none; color:#555;'>{t('metric_soil', lang)}: {soil_val} ↗</a>"
+            f"</span>"
+        )
+        
+        # 4. Allgemeine Lage (Narrative)
+        # We lookup by the DE name since the YAML template explicitly uses `this.region_name_de` for headers
+        narrative_text = regional_narratives.get(r.region_name_de, "–")
+        narrative_html = f"<span style='font-size: 14px; color: #333; line-height: 1.4;'>{narrative_text}</span>"
 
         table_html.append(
             f"<tr style='border-bottom: 1px solid #eee; vertical-align: top;'>"
             f"<td style='padding: 16px 8px;'>{badge}</td>"
             f"<td style='padding: 16px 8px;'><b>{name}</b></td>"
-            f"<td style='padding: 16px 8px; font-size: 14px; min-width:180px;'>{situation}</td>"
-            f"<td style='padding: 16px 8px; font-size: 14px;'>{recs_html}</td>"
-            f"<td style='padding: 16px 8px;'>{link_html}</td>"
+            f"<td style='padding: 16px 8px; font-size: 14px;'>{situation}</td>"
+            f"<td style='padding: 16px 8px;'>{narrative_html}</td>"
             f"</tr>"
         )
         
