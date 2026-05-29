@@ -35,6 +35,32 @@ def test_handlebars_no_each_unchanged():
     assert _handlebars_to_jinja2(src) == src
 
 
+def test_handlebars_if_block_converted():
+    src = "{{#if x.n}}has{{/if}}"
+    out = _handlebars_to_jinja2(src)
+    assert "{% if x.n %}" in out
+    assert "{% endif %}" in out
+
+
+def test_plural_helper():
+    from src.briefing.renderer import _plural
+    assert _plural(1, "Station", "Stationen") == "Station"
+    assert _plural(0, "Station", "Stationen") == "Stationen"
+    assert _plural(2, "Station", "Stationen") == "Stationen"
+
+
+def test_deficit_range_helper_via_ruleset():
+    from src.briefing.renderer import _make_deficit_range_resolver
+    rs = load_ruleset(RULESET_PATH)
+    fn = _make_deficit_range_resolver(rs.nomenclature.indicators, "de")
+    assert fn(None, None, "cdi") == ""
+    # single (min == max) uses the `single` template
+    assert "trocken" in fn(3, 3, "cdi")
+    # range uses adjectives + range template
+    out = fn(2, 4, "niederschlag")
+    assert "bis" in out and "Niederschlagsdefizit" in out
+
+
 # ---------------------------------------------------------------------------
 # Shared fixtures
 # ---------------------------------------------------------------------------
@@ -72,7 +98,7 @@ def test_render_briefing_de_section_keys(_bern_canton):
 
     assert set(doc.sections.keys()) >= {"allgemeine-lage", "handlungsoptionen", "regionen"}
     assert "Bern" in doc.sections["allgemeine-lage"]
-    assert "Mässige Gefahr" in doc.sections["allgemeine-lage"]
+    assert "Bodenfeuchte" in doc.sections["allgemeine-lage"]
     # Maps spec preserved
     assert len(doc.lead_maps) == 2
     assert {m.id for m in doc.lead_maps} == {"cdi_current", "cdi_forecast_week2"}
@@ -83,11 +109,21 @@ def test_render_briefing_fr_uses_french_strings(_bern_canton):
     doc = render_briefing(canton, ruleset, locale="fr")
 
     assert "Berne" in doc.sections["allgemeine-lage"]
-    assert "Danger limité" in doc.sections["allgemeine-lage"]
+    assert "humidité du sol" in doc.sections["allgemeine-lage"]
     assert doc.locale == "fr"
     assert "Mässige" not in doc.lead_headline  # FR headline shouldn't contain German
     assert "Danger limité" in doc.lead_headline or doc.lead_headline != ""
     assert doc.lead_meta != ""
+
+
+def test_render_exposes_banner_and_links(_bern_canton):
+    canton, ruleset = _bern_canton
+    doc = render_briefing(canton, ruleset, locale="de")
+    assert any(b["label"] == "Trockenheitsportal" for b in doc.banner)
+    assert any("VHI" in l["label"] for l in doc.weiterfuehrende_links)
+    # canton-keyed url resolved to a plain string for canton 2 (Bern)
+    gw = next(l for l in doc.weiterfuehrende_links if "Grundwasser" in l["label"])
+    assert gw["url"].startswith("https://www.bvd.be.ch")
 
 
 def test_render_briefing_handlungsoptionen_falls_back_for_level_3():

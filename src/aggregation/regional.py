@@ -1,16 +1,15 @@
 # src/aggregation/regional.py
 from __future__ import annotations
 
-import json
 import math
 from datetime import datetime, timedelta
-from pathlib import Path
 
 import pandas as pd
 
 from config.settings import REGION_NAMES_DE
 from src.aggregation.indicators import compute_pct_critical, compute_percentile, compute_trend
-from src.models import DataBundle, RegionReport, WarnkarteEntry, HydroStationReport
+from src.aggregation.stations import compute_discharge_stats
+from src.models import DataBundle, RegionReport, WarnkarteEntry
 from src.quality.checks import run_quality_checks
 
 
@@ -89,6 +88,17 @@ def compute_region_report(
         else 1
     )
     cdi_forecast_week2 = _compute_cdi_forecast_week2(bundle, region_id)
+    precip_1m_index_forecast = _forecast_week2_value(bundle, region_id, "precip_1m_index_p50")
+    soil_moisture_index_forecast = _forecast_week2_value(bundle, region_id, "soil_moisture_index_p50")
+    precip_deficit_delta = (
+        precip_1m_index_forecast - precip_1m_index
+        if precip_1m_index_forecast is not None else 0
+    )
+    soil_moisture_deficit_delta = (
+        soil_moisture_index_forecast - soil_moisture_index
+        if soil_moisture_index_forecast is not None else 0
+    )
+    discharge = compute_discharge_stats([region_id], bundle)
     if warnkarte_entry is not None:
         warnlevel = warnkarte_entry.warnlevel
         warnlevel_info_de = warnkarte_entry.info_de
@@ -97,55 +107,6 @@ def compute_region_report(
         warnlevel = max(cdi, 1)
         warnlevel_info_de = ""
         warnlevel_info_fr = ""
-
-    # --- Hydro Station Processing ---
-    hydro_reports = []
-    mapping_file = Path("data/station_region_mapping.json")
-    
-    if mapping_file.exists():
-        with open(mapping_file, "r") as f:
-            station_map = json.load(f)
-            
-        region_stations = [st_id for st_id, r_id in station_map.items() if int(r_id) == region_id]
-        curr_st = bundle.current_stations_df
-        ref_st = bundle.reference_stations_df
-        
-        if region_stations and not curr_st.empty and not ref_st.empty:
-            # Filter for region stations AND "Abfluss" only
-            mask = (curr_st["hydro_station_id"].astype(str).isin(region_stations)) & (curr_st["label"] == "Abfluss")
-            reg_curr = curr_st[mask]
-            
-            for st_id, group in reg_curr.groupby("hydro_station_id"):
-                latest = group.sort_values("measured_at").iloc[-1]
-                val = _safe(latest.get("value"))
-                date = latest.get("measured_at")
-                
-                # Extract the station name safely
-                st_name_raw = latest.get("station_name")
-                if pd.isna(st_name_raw) or not st_name_raw:
-                    st_name_raw = latest.get("name", f"Station {st_id}")
-                st_name = str(st_name_raw)
-                
-                if pd.isna(date) or math.isnan(val):
-                    continue
-                    
-                doy = date.dayofyear
-                ref_mask = (ref_st["hydro_station_id"].astype(str) == str(st_id)) & (ref_st["doy"] == doy)
-                ref_row = ref_st[ref_mask]
-                
-                t1 = float('nan')
-                min_val = float('nan')
-                if not ref_row.empty:
-                    t1 = _safe(ref_row.iloc[0].get("threshold1"))
-                    min_val = _safe(ref_row.iloc[0].get("min"))
-                    
-                hydro_reports.append(HydroStationReport(
-                    station_id=str(st_id),
-                    station_name=st_name, 
-                    current_value=val,
-                    threshold1=t1,
-                    min_value=min_val
-                ))
 
     return RegionReport(
         region_id=region_id,
@@ -171,14 +132,18 @@ def compute_region_report(
         warnlevel_info_de=warnlevel_info_de,
         warnlevel_info_fr=warnlevel_info_fr,
         cdi_forecast_week2=cdi_forecast_week2,
-        hydro_stations=hydro_reports,
+        precip_1m_index_forecast=precip_1m_index_forecast,
+        soil_moisture_index_forecast=soil_moisture_index_forecast,
+        precip_deficit_delta=precip_deficit_delta,
+        soil_moisture_deficit_delta=soil_moisture_deficit_delta,
+        discharge=discharge,
     )
 
 
-def _compute_cdi_forecast_week2(bundle: DataBundle, region_id: int) -> int | None:
-    """Return the CDI forecast for valid_at ≈ today + 14 d. None if forecast horizon is shorter."""
+def _forecast_week2_value(bundle: DataBundle, region_id: int, column: str) -> int | None:
+    """Return the week-2 (~+14d) p50 value of `column` for a region, or None."""
     forecast = bundle.forecast_df
-    if forecast.empty:
+    if forecast.empty or column not in forecast.columns:
         return None
     target_date = bundle.data_timestamp + timedelta(days=14)
     region_forecast = forecast[forecast["drought_region_id"] == region_id]
@@ -189,6 +154,11 @@ def _compute_cdi_forecast_week2(bundle: DataBundle, region_id: int) -> int | Non
     closest = region_forecast.sort_values("delta").iloc[0]
     if closest["delta"] > pd.Timedelta(days=5):
         return None
-    if pd.isna(closest.get("cdi_p50")):
+    if pd.isna(closest.get(column)):
         return None
-    return int(closest["cdi_p50"])
+    return int(closest[column])
+
+
+def _compute_cdi_forecast_week2(bundle: DataBundle, region_id: int) -> int | None:
+    """Return the CDI forecast for valid_at ≈ today + 14 d. None if forecast horizon is shorter."""
+    return _forecast_week2_value(bundle, region_id, "cdi_p50")

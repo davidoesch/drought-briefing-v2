@@ -109,3 +109,21 @@ def test_canton_report_uses_swisseo_vhi():
     canton = compute_canton_report(canton_id=2, bundle=bundle, warnkarte_data=warnkarte)
     region_34 = next(r for r in canton.regions if r.region_id == 34)
     assert region_34.vhi == pytest.approx(60.0)
+
+
+def test_canton_report_new_aggregates():
+    from src.models import DischargeStats
+    bundle = load_data()
+    warnkarte = {rid: _make_warnkarte(rid, 2) for rid in [33, 34, 35, 37, 38, 41]}
+    c = compute_canton_report(canton_id=2, bundle=bundle, warnkarte_data=warnkarte)
+    assert 0 <= c.n_regions_dry <= len(c.regions)
+    assert c.cdi_min_dry is None or 2 <= c.cdi_min_dry <= 5
+    assert c.cdi_max_dry is None or 2 <= c.cdi_max_dry <= 5
+    assert isinstance(c.cdi_situation_delta, int)
+    assert c.mean_precip_sum_1m >= 0.0
+    assert c.mean_precip_sum_3m >= 0.0
+    assert 1 <= c.precip_index_min <= 5
+    assert 1 <= c.precip_index_max <= 5
+    assert isinstance(c.discharge, DischargeStats)
+    assert 0 <= c.n_regions_with_precip_deficit <= len(c.regions)
+    assert 0 <= c.n_regions_with_soil_moisture_deficit <= len(c.regions)

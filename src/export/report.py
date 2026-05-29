@@ -90,26 +90,17 @@ def to_html(
                 
                 name_html = f"<a href='{region_url}' target='_blank' style='color: inherit; text-decoration: underline;'>{html.escape(name_raw)}</a>"
                 
-                # New Hydro Station Export
-                if r.hydro_stations:
-                    hydro_lines = []
-                    for hs in r.hydro_stations:
-                        val_str = f"{hs.current_value:.1f}" if not math.isnan(hs.current_value) else "–"
-                        t1_str = f"{hs.threshold1:.1f}" if not math.isnan(hs.threshold1) else "–"
-                        min_str = f"{hs.min_value:.1f}" if not math.isnan(hs.min_value) else "–"
-                        
-                        header_text = hs.station_name if str(hs.station_id) in hs.station_name else f"{hs.station_name} ({hs.station_id})"
-                        
-                        hydro_lines.append(
-                            f"<b>{html.escape(header_text)}</b><br/>"
-                            f"<span style='color:#555; font-size:12px; line-height: 1.3;'>"
-                            f"Abfluss: {val_str}<br/>"
-                            f"T1: {t1_str} | Min: {min_str}"
-                            f"</span>"
-                        )
-                    situation = "<br/><br/>".join(hydro_lines)
-                else:
-                    situation = "<span style='color:#999; font-size: 13px;'>Keine Stationen/Daten</span>"
+                base_url = f"https://www.trockenheit.admin.ch/{doc.locale}/regionen/{r.region_id}/aktuelle-lage"
+                cdi_label = get_cdi_labels(doc.locale).get(r.cdi, "")
+                spi_val = f"{r.spi_3m:.2f}" if not math.isnan(r.spi_3m) else "–"
+                soil_val = f"{r.soil_moisture_pct:.0f}%" if not math.isnan(r.soil_moisture_pct) else "–"
+                situation = (
+                    f"<b><a href='{base_url}' target='_blank' style='color:#1a1a1a;'>CDI {r.cdi} ({html.escape(cdi_label)}) ↗</a></b><br/>"
+                    f"<span style='color:#555; font-size:12px; line-height:1.5;'>"
+                    f"<a href='{base_url}#precipitation' target='_blank' style='color:#555;'>{html.escape(t('metric_spi', doc.locale))}: {spi_val} ↗</a><br/>"
+                    f"<a href='{base_url}#moisture' target='_blank' style='color:#555;'>{html.escape(t('metric_soil', doc.locale))}: {soil_val} ↗</a>"
+                    f"</span>"
+                )
                 
                 narrative = regional_narratives.get(r.region_name_de, "–")
                 
@@ -141,6 +132,19 @@ def to_html(
 
     sections_html = "\n".join(sections_html_parts)
 
+    # Banner link row (top) and weiterführende Links (bottom)
+    banner_html = " · ".join(
+        f'<a href="{html.escape(b["url"])}">{html.escape(b["label"])}</a>'
+        for b in doc.banner
+    )
+    banner_block = f'<p class="banner">{banner_html}</p>' if banner_html else ""
+    links_items = "".join(
+        f'<li><a href="{html.escape(link["url"])}">{html.escape(link["label"])}</a></li>'
+        for link in doc.weiterfuehrende_links
+    )
+    links_block = f'<section class="links"><ul>{links_items}</ul></section>' if links_items else ""
+
+    # Quality summary block
     q = canton_report.quality
     quality_html = (
         f'<section class="quality" style="margin-top: 40px; padding-top: 20px; border-top: 1px solid #eee;">'
@@ -162,7 +166,9 @@ def to_html(
     </style>
 </head>
 <body>
-<header><h1>{html.escape(title)}</h1>{badge_html}</header>
-<main>{sections_html}\n{quality_html}</main>
+<header><h1>{html.escape(title)}</h1>{badge_html}{banner_block}</header>
+<main>{sections_html}
+{links_block}
+{quality_html}</main>
 </body>
 </html>"""
