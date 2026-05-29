@@ -64,7 +64,7 @@ Pipeline-first: **DataBundle → CantonReport → BriefingDocument → UI/Export
 All pipeline stages are typed dataclasses:
 - `DataBundle` — raw DataFrames (current, historic, reference, forecast) + source tag. `forecast_df` defaults to an empty DataFrame.
 - `QualityReport` — per-dataset health: `data_age_days`, `coverage_pct`, `missing_columns`, `outlier_flags`, `is_stale`, `overall` (ok/warning/error).
-- `RegionReport` — per-region indicators: CDI, SPI, soil moisture, VHI, precip sums, index levels (1–5), warnlevel, quality.
+- `RegionReport` — per-region indicators: CDI (0–5), SPI, soil moisture, VHI, precip sums, sub-index levels (precip_1m_index / soil_moisture_index / hydro_index, each 1–5), warnlevel, quality.
 - `CantonReport` — aggregated canton view: list of `RegionReport`, max warnlevel, region counts by index, folded quality.
 - `WarnkarteEntry` — BAFU warning level (1–5) + bilingual info text + `valid_from` date.
 - `MapSpec` — descriptor for a map panel: `id`, bilingual titles, `source` (path expression into CantonReport), `style` (renderer hint, e.g. `"choropleth_warnregionen"`).
@@ -75,7 +75,7 @@ All pipeline stages are typed dataclasses:
 Two deployment targets:
 
 1. **Docker (dev/prod server):** `make up` — full Streamlit app with folium maps and HTML export.
-2. **GitHub Pages (static):** `docs/index.html` bootstraps the app via [stlite](https://github.com/whitphx/stlite) (Pyodide-based Streamlit in the browser). CI (`deploy.yml`) rsync-copies the repo to `_site/` on every push to `main`. The stlite build lists all source files explicitly — update `docs/index.html` when adding new source files.
+2. **GitHub Pages (static):** `docs/index.html` bootstraps the app via [stlite](https://github.com/whitphx/stlite) (Pyodide-based Streamlit in the browser). CI (`deploy.yml`) rsync-copies the repo to `_site/` on every push to `main`. The stlite build lists all source files explicitly — **update `docs/index.html` when adding or removing source files**. The file list can drift: if stlite references a path that no longer exists, the browser app will silently 404 on it.
 
 ## Key Constants (`config/settings.py`)
 
@@ -91,3 +91,11 @@ Two deployment targets:
 - `soil_moisture_ufc` in the CSV maps to `soil_moisture_pct` in `RegionReport`.
 - VHI can legitimately be NaN — guard with `math.isnan()` before formatting or displaying.
 - `warnlevel` on `RegionReport` comes from `WarnkarteEntry` (BAFU API / fixture), not the CDI CSV. It is the official BAFU Gefahrenstufe (1–5) and is the source of truth for action recommendations.
+
+## Expert Notes
+
+`app.py` stores per-region free-text notes in `st.session_state.expert_notes` (keyed `expert_<region_id>`). These are injected into the HTML export via `to_html(..., expert_notes=st.session_state.expert_notes)`. Notes persist for the browser session only.
+
+## Testing
+
+HTTP clients (`warnkarte_client`, `vhi_client`) are tested using the `responses` library (registered in `[dependency-groups] dev`), which intercepts `requests` calls without a live network. To add a new HTTP client test, patch via `@responses.activate` and register mock URLs with `responses.add()`.
