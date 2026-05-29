@@ -61,6 +61,7 @@ with st.sidebar:
         format_func=lambda l: "Deutsch" if l == "de" else "Français",
         horizontal=True,
         index=0,
+        key="lang_selector"
     )
 
     st.title(t("sidebar_title", lang))
@@ -73,6 +74,7 @@ with st.sidebar:
         options=canton_options,
         format_func=lambda cid: CANTON_NAMES[cid].get(lang, CANTON_NAMES[cid]["de"]),
         index=0,
+        key="canton_selector"
     )
     
     st.divider()
@@ -81,7 +83,8 @@ with st.sidebar:
         "Navigation",
         options=["canton", "regions"],
         format_func=lambda x: t(f"tab_{x}", lang),
-        label_visibility="collapsed"
+        label_visibility="collapsed",
+        key="view_tab_selector"
     )
 
     st.divider()
