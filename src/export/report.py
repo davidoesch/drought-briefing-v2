@@ -99,11 +99,12 @@ def to_html(
                         min_str = f"{hs.min_value:.1f}" if not math.isnan(hs.min_value) else "–"
                         
                         header_text = hs.station_name if str(hs.station_id) in hs.station_name else f"{hs.station_name} ({hs.station_id})"
+                        abfluss_label = html.escape(t("metric_abfluss", doc.locale))
                         
                         hydro_lines.append(
                             f"<b>{html.escape(header_text)}</b><br/>"
                             f"<span style='color:#555; font-size:12px; line-height: 1.3;'>"
-                            f"Abfluss: {val_str}<br/>"
+                            f"{abfluss_label}: {val_str}<br/>"
                             f"T1: {t1_str} | Min: {min_str}"
                             f"</span>"
                         )
