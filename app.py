@@ -81,9 +81,9 @@ with st.sidebar:
         index=0,
         key="canton_selector"
     )
-    
+
     st.divider()
-    
+
     view_tab = st.radio(
         "Navigation",
         options=["canton", "regions"],
@@ -130,6 +130,12 @@ if view_tab == "canton":
         unsafe_allow_html=True,
     )
 
+    if doc.banner:
+        banner_html = " · ".join(
+            f'<a href="{b["url"]}" target="_blank">{b["label"]}</a>' for b in doc.banner
+        )
+        st.markdown(banner_html, unsafe_allow_html=True)
+
     st.divider()
 
     # ── Two side-by-side maps ──────────────────────────────────────────────────
@@ -149,7 +155,7 @@ if view_tab == "canton":
         </span>"""
         for colour, label in zip(DROUGHT_COLOURS, labels)
     )
-     
+
     st.markdown(
         f'<div style="display:flex;flex-wrap:wrap;align-items:center;'
         f'margin-top: 10px; padding: 0; gap: 8px;">'
@@ -162,17 +168,23 @@ if view_tab == "canton":
     for sec in rs.sections:
         if sec.id == "regionen":
             continue
-            
+
         title = sec.title.get(lang, sec.title.get("de", sec.id))
         st.markdown(f"## {title}")
         st.markdown(doc.sections[sec.id])
         st.write("")
 
+    # ── Weiterführende Links ────────────────────────────────────────────────
+    if doc.weiterfuehrende_links:
+        st.markdown("#### " + ("Weiterführende Links" if lang == "de" else "Liens complémentaires"))
+        for link in doc.weiterfuehrende_links:
+            st.markdown(f"- [{link['label']}]({link['url']})")
+
 # ── Tab 2: Regionale Lage ──────────────────────────────────────────────────
 elif view_tab == "regions":
     st.title(f"{t('tab_regions', lang)}: {canton_label}")
     st.divider()
-    
+
     # Extract narratives from the generated Markdown
     regional_narratives = {}
     if "regionen" in doc.sections:
@@ -185,7 +197,7 @@ elif view_tab == "regions":
     regionen_sec = next((s for s in rs.sections if s.id == "regionen"), None)
     col_allg_lage = regionen_sec.title.get(lang, "Allgemeine Lage") if regionen_sec else "Allgemeine Lage"
     col_expert = t("col_canton_recs", lang)
-    
+
     # Render Table Header using Streamlit Columns
     h_col1, h_col2, h_col3, h_col4, h_col5 = st.columns([1, 1.5, 2.5, 3.5, 2.5])
     h_col1.markdown(f"**{t('col_warnstufe', lang)}**")
@@ -193,27 +205,27 @@ elif view_tab == "regions":
     h_col3.markdown(f"**{t('col_situation', lang)}**")
     h_col4.markdown(f"**{col_allg_lage}**")
     h_col5.markdown(f"**{col_expert}**")
-    
+
     st.markdown("<hr style='margin-top: 0px; margin-bottom: 10px;'/>", unsafe_allow_html=True)
 
     # Render Rows
     for r in canton.regions:
         c1, c2, c3, c4, c5 = st.columns([1, 1.5, 2.5, 3.5, 2.5])
-        
+
         # 1. Warnstufe Badge
         bg, fg = _warnstufe_palette(r.warnlevel)
         badge = f"<div style='background:{bg}; color:{fg}; padding:6px; border-radius:6px; text-align:center; font-weight:bold; width:max-content; min-width:30px;'>{r.warnlevel}</div>"
-        
+
         # 2. Region Name
         name = get_region_names(lang).get(r.region_id, r.region_name_de)
-        
+
         # 3. Situation (Deep Links)
         cdi_label = get_cdi_labels(lang).get(r.cdi, t("unknown", lang))
         spi_val = f"{r.spi_3m:.2f}" if not math.isnan(r.spi_3m) else "–"
         soil_val = f"{r.soil_moisture_pct:.0f}%" if not math.isnan(r.soil_moisture_pct) else "–"
-        
+
         base_url = f"https://www.trockenheit.admin.ch/{lang}/regionen/{r.region_id}/aktuelle-lage"
-        
+
         situation = (
             f"<b><a href='{base_url}' target='_blank' style='text-decoration:none; color:#1a1a1a;'>CDI {r.cdi} ({cdi_label}) ↗</a></b><br/>"
             f"<span style='color:#555; line-height: 1.5;'>"
@@ -221,7 +233,7 @@ elif view_tab == "regions":
             f"<a href='{base_url}#moisture' target='_blank' style='text-decoration:none; color:#555;'>{t('metric_soil', lang)}: {soil_val} ↗</a>"
             f"</span>"
         )
-        
+
         # 4. Allgemeine Lage (Narrative)
         narrative_text = regional_narratives.get(r.region_name_de, "–")
         narrative_html = f"<span style='font-size: 14px; color: #333; line-height: 1.4;'>{narrative_text}</span>"
@@ -237,23 +249,23 @@ elif view_tab == "regions":
         with c5:
             # 5. Expert Input Widget
             expert_key = f"expert_{r.region_id}"
-            
+
             # Sync value from session_state if it exists
             current_val = st.session_state.expert_notes.get(expert_key, "")
-            
+
             # Update session state on change
             def update_note(key=expert_key):
                 st.session_state.expert_notes[key] = st.session_state[f"widget_{key}"]
 
             st.text_area(
-                t("expert_input_label", lang), 
-                value=current_val, 
-                key=f"widget_{expert_key}", 
+                t("expert_input_label", lang),
+                value=current_val,
+                key=f"widget_{expert_key}",
                 label_visibility="collapsed",
                 on_change=update_note,
                 placeholder=t("expert_input_placeholder", lang)
             )
-            
+
         st.markdown("<hr style='margin-top: 10px; margin-bottom: 10px; border-top: 1px solid #eee;'/>", unsafe_allow_html=True)
 
 
@@ -272,7 +284,7 @@ with st.expander(t("quality_expander", lang)):
         st.warning(f"{t('quality_missing_cols', lang)}: {', '.join(q.missing_columns)}")
     if q.outlier_flags:
         st.warning(f"{t('quality_outliers', lang)}: {', '.join(q.outlier_flags)}")
-    
+
     for r in canton.regions:
         st.caption(
             f"R{r.region_id} ({r.region_name_de}): "
@@ -281,12 +293,12 @@ with st.expander(t("quality_expander", lang)):
 
 with export_placeholder:
     html_str = to_html(
-        doc=doc, 
-        canton_report=canton, 
-        ruleset=rs, 
+        doc=doc,
+        canton_report=canton,
+        ruleset=rs,
         expert_notes=st.session_state.expert_notes
     )
-    
+
     st.download_button(
         label=t("btn_html", lang),
         data=html_str.encode("utf-8"),

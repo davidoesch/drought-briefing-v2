@@ -109,6 +109,16 @@ def test_render_briefing_fr_uses_french_strings(_bern_canton):
     assert doc.lead_meta != ""
 
 
+def test_render_exposes_banner_and_links(_bern_canton):
+    canton, ruleset = _bern_canton
+    doc = render_briefing(canton, ruleset, locale="de")
+    assert any(b["label"] == "Trockenheitsportal" for b in doc.banner)
+    assert any("VHI" in l["label"] for l in doc.weiterfuehrende_links)
+    # canton-keyed url resolved to a plain string for canton 2 (Bern)
+    gw = next(l for l in doc.weiterfuehrende_links if "Grundwasser" in l["label"])
+    assert gw["url"].startswith("https://www.bvd.be.ch")
+
+
 def test_render_briefing_handlungsoptionen_falls_back_for_level_3():
     bundle = load_data()
     warnkarte = {

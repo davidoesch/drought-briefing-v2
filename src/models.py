@@ -126,3 +126,5 @@ class BriefingDocument:
     lead_maps: list = field(default_factory=list)   # list[MapSpec]
     lead_headline: str = ""
     lead_meta: str = ""
+    banner: list = field(default_factory=list)                 # list[dict]: {label, url}
+    weiterfuehrende_links: list = field(default_factory=list)  # list[dict]: {label, url}

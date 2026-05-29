@@ -169,6 +169,19 @@ def render_briefing(
         for m in lead.maps
     ]
 
+    banner = [
+        {"label": b.label.get(locale, b.label.get("de", "")), "url": b.url}
+        for b in (ruleset.banner or [])
+    ]
+    links = []
+    for link in (ruleset.weiterfuehrende_links or []):
+        url = link.url
+        if isinstance(url, dict):
+            url = url.get(canton.canton_id)
+        if url is None:
+            continue  # link not available for this canton
+        links.append({"label": link.label.get(locale, link.label.get("de", "")), "url": url})
+
     return BriefingDocument(
         sections=sections,
         report=canton,
@@ -177,4 +190,6 @@ def render_briefing(
         lead_maps=lead_maps,
         lead_headline=headline,
         lead_meta=meta,
+        banner=banner,
+        weiterfuehrende_links=links,
     )
