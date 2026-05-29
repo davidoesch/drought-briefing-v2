@@ -77,6 +77,7 @@ class RegionReport:
     precip_deficit_delta: int = 0
     soil_moisture_deficit_delta: int = 0
     discharge: DischargeStats = field(default_factory=lambda: DischargeStats(0, 0, 0, 0))
+    hydro_stations: list[HydroStationReport] = field(default_factory=list)
 
 
 @dataclass

@@ -9,7 +9,7 @@ import pandas as pd
 from config.settings import REGION_NAMES_DE
 from src.aggregation.indicators import compute_pct_critical, compute_percentile, compute_trend
 from src.aggregation.stations import compute_discharge_stats
-from src.models import DataBundle, RegionReport, WarnkarteEntry
+from src.models import DataBundle, HydroStationReport, RegionReport, WarnkarteEntry
 from src.quality.checks import run_quality_checks
 
 
@@ -99,6 +99,7 @@ def compute_region_report(
         if soil_moisture_index_forecast is not None else 0
     )
     discharge = compute_discharge_stats([region_id], bundle)
+    hydro_stations = _compute_hydro_stations(region_id, bundle)
     if warnkarte_entry is not None:
         warnlevel = warnkarte_entry.warnlevel
         warnlevel_info_de = warnkarte_entry.info_de
@@ -137,6 +138,7 @@ def compute_region_report(
         precip_deficit_delta=precip_deficit_delta,
         soil_moisture_deficit_delta=soil_moisture_deficit_delta,
         discharge=discharge,
+        hydro_stations=hydro_stations,
     )
 
 
@@ -162,3 +164,59 @@ def _forecast_week2_value(bundle: DataBundle, region_id: int, column: str) -> in
 def _compute_cdi_forecast_week2(bundle: DataBundle, region_id: int) -> int | None:
     """Return the CDI forecast for valid_at ≈ today + 14 d. None if forecast horizon is shorter."""
     return _forecast_week2_value(bundle, region_id, "cdi_p50")
+
+
+def _compute_hydro_stations(region_id: int, bundle: DataBundle) -> list[HydroStationReport]:
+    curr_st = bundle.current_stations_df
+    ref_st = bundle.reference_stations_df
+    if curr_st.empty or ref_st.empty or not bundle.station_region_map:
+        return []
+
+    region_station_ids = {st_id for st_id, r_id in bundle.station_region_map.items() if r_id == region_id}
+    if not region_station_ids:
+        return []
+
+    mask = curr_st["hydro_station_id"].astype(str).isin(region_station_ids) & (curr_st["label"] == "Abfluss")
+    reg_curr = curr_st[mask]
+    if reg_curr.empty:
+        return []
+
+    reports = []
+    for st_id, group in reg_curr.groupby("hydro_station_id"):
+        latest = group.sort_values("measured_at").iloc[-1]
+        val = float("nan")
+        raw_val = latest.get("value")
+        if raw_val is not None and not pd.isna(raw_val):
+            val = float(raw_val)
+        date = latest.get("measured_at")
+
+        st_name_raw = latest.get("station_name")
+        if pd.isna(st_name_raw) or not st_name_raw:
+            st_name_raw = latest.get("name", f"Station {st_id}")
+        st_name = str(st_name_raw)
+
+        if pd.isna(date) or math.isnan(val):
+            continue
+
+        doy = date.dayofyear
+        ref_mask = (ref_st["hydro_station_id"].astype(str) == str(st_id)) & (ref_st["doy"] == doy)
+        ref_row = ref_st[ref_mask]
+
+        t1 = float("nan")
+        min_val = float("nan")
+        if not ref_row.empty:
+            raw_t1 = ref_row.iloc[0].get("threshold1")
+            raw_min = ref_row.iloc[0].get("min")
+            if raw_t1 is not None and not pd.isna(raw_t1):
+                t1 = float(raw_t1)
+            if raw_min is not None and not pd.isna(raw_min):
+                min_val = float(raw_min)
+
+        reports.append(HydroStationReport(
+            station_id=str(st_id),
+            station_name=st_name,
+            current_value=val,
+            threshold1=t1,
+            min_value=min_val,
+        ))
+    return reports

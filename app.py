@@ -260,15 +260,25 @@ elif view_tab == "regions":
         slug = re.sub(r'[^a-z0-9]+', '-', slug).strip('-')
         region_url = f"https://www.trockenheit.admin.ch/{lang}/regionen/{r.region_id}-{slug}/aktuelle-lage#index"
         
-        # 3. Situation (Hydro Station Discharge Summary)
-        ds = r.discharge
-        if ds.n_total > 0:
-            situation = (
-                f"<span style='font-size: 13px; line-height: 1.5;'>"
-                f"{ds.n_low}/{ds.n_total} Stationen niedrig<br/>"
-                f"{ds.n_very_low}/{ds.n_total} sehr niedrig"
-                f"</span>"
-            )
+        # 3. Situation (Hydro Station Data)
+        if r.hydro_stations:
+            hydro_lines = []
+            for hs in r.hydro_stations:
+                val_str = f"{hs.current_value:.1f}" if not math.isnan(hs.current_value) else "–"
+                t1_str = f"{hs.threshold1:.1f}" if not math.isnan(hs.threshold1) else "–"
+                min_str = f"{hs.min_value:.1f}" if not math.isnan(hs.min_value) else "–"
+
+                header_text = hs.station_name if str(hs.station_id) in hs.station_name else f"{hs.station_name} ({hs.station_id})"
+                abfluss_label = t("metric_abfluss", lang)
+
+                hydro_lines.append(
+                    f"<b>{header_text}</b><br/>"
+                    f"<span style='opacity: 0.8; font-size:13px; line-height: 1.3;'>"
+                    f"{abfluss_label}: {val_str}<br/>"
+                    f"T1: {t1_str} | Min: {min_str}"
+                    f"</span>"
+                )
+            situation = "<br/><br/>".join(hydro_lines)
         else:
             situation = "<span style='opacity: 0.5; font-size: 13px;'>Keine Stationen/Daten</span>"
         
