@@ -25,6 +25,10 @@ st.set_page_config(
     layout="wide",
 )
 
+# Initialize session state for expert notes
+if "expert_notes" not in st.session_state:
+    st.session_state.expert_notes = {}
+
 @st.cache_data(ttl=3600, show_spinner="Daten werden geladen…")
 def _load_bundle() -> DataBundle:
     return load_data()
@@ -130,7 +134,6 @@ if view_tab == "canton":
     st.divider()
 
     for sec in rs.sections:
-        # Exclude the 'regionen' section from the main tab to avoid redundancy
         if sec.id == "regionen":
             continue
             
@@ -147,7 +150,6 @@ elif view_tab == "regions":
     # Extract narratives from the generated Markdown
     regional_narratives = {}
     if "regionen" in doc.sections:
-        # Split by "### <Region Name>"
         parts = re.split(r'^###\s+(.*)$', doc.sections["regionen"], flags=re.MULTILINE)
         for i in range(1, len(parts), 2):
             r_name = parts[i].strip()
@@ -156,18 +158,22 @@ elif view_tab == "regions":
 
     regionen_sec = next((s for s in rs.sections if s.id == "regionen"), None)
     col_allg_lage = regionen_sec.title.get(lang, "Allgemeine Lage") if regionen_sec else "Allgemeine Lage"
+    col_expert = "Experteneinschätzung" if lang == "de" else "Évaluation d'expert"
     
-    table_html = [
-        "<table style='width: 100%; text-align: left; border-collapse: collapse; font-family: sans-serif;'>",
-        "<thead><tr style='border-bottom: 2px solid #ddd; background-color: rgba(0,0,0,0.05);'>",
-        f"<th style='padding: 12px 8px; width: 10%;'>{t('col_warnstufe', lang)}</th>",
-        f"<th style='padding: 12px 8px; width: 15%;'>{t('col_region', lang)}</th>",
-        f"<th style='padding: 12px 8px; width: 25%;'>{t('col_situation', lang)}</th>",
-        f"<th style='padding: 12px 8px; width: 50%;'>{col_allg_lage}</th>",
-        "</tr></thead><tbody>"
-    ]
+    # Render Table Header using Streamlit Columns
+    h_col1, h_col2, h_col3, h_col4, h_col5 = st.columns([1, 1.5, 2.5, 3.5, 2.5])
+    h_col1.markdown(f"**{t('col_warnstufe', lang)}**")
+    h_col2.markdown(f"**{t('col_region', lang)}**")
+    h_col3.markdown(f"**{t('col_situation', lang)}**")
+    h_col4.markdown(f"**{col_allg_lage}**")
+    h_col5.markdown(f"**{col_expert}**")
+    
+    st.markdown("<hr style='margin-top: 0px; margin-bottom: 10px;'/>", unsafe_allow_html=True)
 
+    # Render Rows
     for r in canton.regions:
+        c1, c2, c3, c4, c5 = st.columns([1, 1.5, 2.5, 3.5, 2.5])
+        
         # 1. Warnstufe Badge
         bg, fg = _warnstufe_palette(r.warnlevel)
         badge = f"<div style='background:{bg}; color:{fg}; padding:6px; border-radius:6px; text-align:center; font-weight:bold; width:max-content; min-width:30px;'>{r.warnlevel}</div>"
@@ -191,21 +197,38 @@ elif view_tab == "regions":
         )
         
         # 4. Allgemeine Lage (Narrative)
-        # We lookup by the DE name since the YAML template explicitly uses `this.region_name_de` for headers
         narrative_text = regional_narratives.get(r.region_name_de, "–")
         narrative_html = f"<span style='font-size: 14px; color: #333; line-height: 1.4;'>{narrative_text}</span>"
 
-        table_html.append(
-            f"<tr style='border-bottom: 1px solid #eee; vertical-align: top;'>"
-            f"<td style='padding: 16px 8px;'>{badge}</td>"
-            f"<td style='padding: 16px 8px;'><b>{name}</b></td>"
-            f"<td style='padding: 16px 8px; font-size: 14px;'>{situation}</td>"
-            f"<td style='padding: 16px 8px;'>{narrative_html}</td>"
-            f"</tr>"
-        )
-        
-    table_html.append("</tbody></table>")
-    st.markdown("".join(table_html), unsafe_allow_html=True)
+        with c1:
+            st.markdown(badge, unsafe_allow_html=True)
+        with c2:
+            st.markdown(f"**{name}**")
+        with c3:
+            st.markdown(situation, unsafe_allow_html=True)
+        with c4:
+            st.markdown(narrative_html, unsafe_allow_html=True)
+        with c5:
+            # 5. Expert Input Widget
+            expert_key = f"expert_{r.region_id}"
+            
+            # Sync value from session_state if it exists
+            current_val = st.session_state.expert_notes.get(expert_key, "")
+            
+            # Update session state on change
+            def update_note(key=expert_key):
+                st.session_state.expert_notes[key] = st.session_state[f"widget_{key}"]
+
+            st.text_area(
+                "Expert Input", 
+                value=current_val, 
+                key=f"widget_{expert_key}", 
+                label_visibility="collapsed",
+                on_change=update_note,
+                placeholder="Einschätzung hier eingeben..."
+            )
+            
+        st.markdown("<hr style='margin-top: 10px; margin-bottom: 10px; border-top: 1px solid #eee;'/>", unsafe_allow_html=True)
 
 
 # ── Global Footer (Applies to both tabs) ───────────────────────────────────
