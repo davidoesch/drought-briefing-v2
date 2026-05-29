@@ -119,7 +119,7 @@ for col, map_spec in zip(map_cols, doc.lead_maps):
     with col:
         st.subheader(map_spec.title_de if lang == "de" else map_spec.title_fr)
         m = build_canton_map(canton, map_spec)
-        st.components.v1.html(m._repr_html_(), height=300)
+        st.components.v1.html(m._repr_html_(), height=250)
 
 DROUGHT_LEGEND = {
     "de": ["Nicht trocken", "Leicht trocken", "Trocken", "Sehr trocken", "Extrem trocken"],
@@ -138,7 +138,8 @@ items_html = "".join(
 )
  
 st.markdown(
-    f'<div style="display:flex;flex-wrap:wrap;align-items:center;padding:8px 0;gap:4px;">'
+    f'<div style="display:flex;flex-wrap:wrap;align-items:center;'
+    f'margin-top:-2rem;padding:0;gap:4px;">'
     f'{items_html}</div>',
     unsafe_allow_html=True,
 )
