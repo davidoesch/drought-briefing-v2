@@ -97,6 +97,11 @@ def _pick_template(template, locale: str, section_id: str) -> str:
     raise ValueError(f"Section {section_id} has no usable template for locale={locale!r}")
 
 
+def _plural(n: int, singular: str, plural: str) -> str:
+    """Return `singular` when n == 1, else `plural`. Used for noun/verb agreement."""
+    return singular if n == 1 else plural
+
+
 def _make_deficit_range_resolver(indicators, locale: str):
     def deficit_range(min_idx, max_idx, key):
         spec = indicators[key]
@@ -136,6 +141,7 @@ def render_briefing(
     env.globals["deficit_range"] = _make_deficit_range_resolver(
         ruleset.nomenclature.indicators, locale
     )
+    env.globals["plural"] = _plural
     env.globals["nomenclature"] = ruleset.nomenclature.indicators
     # Resolve fallback chains so the template never sees None.empfehlungen
     resolved_he = type(ruleset.handlungsempfehlungen).model_construct(

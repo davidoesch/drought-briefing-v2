@@ -42,6 +42,13 @@ def test_handlebars_if_block_converted():
     assert "{% endif %}" in out
 
 
+def test_plural_helper():
+    from src.briefing.renderer import _plural
+    assert _plural(1, "Station", "Stationen") == "Station"
+    assert _plural(0, "Station", "Stationen") == "Stationen"
+    assert _plural(2, "Station", "Stationen") == "Stationen"
+
+
 def test_deficit_range_helper_via_ruleset():
     from src.briefing.renderer import _make_deficit_range_resolver
     rs = load_ruleset(RULESET_PATH)
