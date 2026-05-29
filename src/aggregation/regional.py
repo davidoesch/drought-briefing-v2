@@ -2,17 +2,21 @@
 from __future__ import annotations
 
 import math
-from datetime import datetime
+from datetime import datetime, timedelta
 
 import pandas as pd
 
 from config.settings import BERNE_REGION_NAMES
 from src.aggregation.indicators import compute_pct_critical, compute_percentile, compute_trend
-from src.models import DataBundle, RegionReport
+from src.models import DataBundle, RegionReport, WarnkarteEntry
 from src.quality.checks import run_quality_checks
 
 
-def compute_region_report(region_id: int, bundle: DataBundle) -> RegionReport:
+def compute_region_report(
+    region_id: int,
+    bundle: DataBundle,
+    warnkarte_entry: WarnkarteEntry | None = None,
+) -> RegionReport:
     # --- Current snapshot (latest row for this region) ---
     current = bundle.current_df[bundle.current_df["drought_region_id"] == region_id]
     current = current.sort_values("measured_at")
@@ -66,6 +70,33 @@ def compute_region_report(region_id: int, bundle: DataBundle) -> RegionReport:
     hist_spi_series = hist_region["spi_3m"] if not hist_region.empty else None
     quality = run_quality_checks(row, bundle.data_timestamp, spi_3m_reference=hist_spi_series)
 
+    precip_sum_1m = _safe(row.get("precip_sum_1m"))
+    precip_sum_3m = _safe(row.get("precip_sum_3m"))
+    precip_1m_index = (
+        int(row["precip_1m_index"])
+        if not pd.isna(row.get("precip_1m_index"))
+        else 1
+    )
+    soil_moisture_index = (
+        int(row["soil_moisture_index"])
+        if not pd.isna(row.get("soil_moisture_index"))
+        else 1
+    )
+    hydro_index = (
+        int(row["hydro_index"])
+        if not pd.isna(row.get("hydro_index"))
+        else 1
+    )
+    cdi_forecast_week2 = _compute_cdi_forecast_week2(bundle, region_id)
+    if warnkarte_entry is not None:
+        warnlevel = warnkarte_entry.warnlevel
+        warnlevel_info_de = warnkarte_entry.info_de
+        warnlevel_info_fr = warnkarte_entry.info_fr
+    else:
+        warnlevel = max(cdi, 1)
+        warnlevel_info_de = ""
+        warnlevel_info_fr = ""
+
     return RegionReport(
         region_id=region_id,
         region_name_de=BERNE_REGION_NAMES.get(region_id, f"Region {region_id}"),
@@ -81,4 +112,32 @@ def compute_region_report(region_id: int, bundle: DataBundle) -> RegionReport:
         pct_critical=pct_critical,
         spi_3m_percentile=spi_3m_percentile,
         quality=quality,
+        precip_sum_1m=precip_sum_1m,
+        precip_sum_3m=precip_sum_3m,
+        precip_1m_index=precip_1m_index,
+        soil_moisture_index=soil_moisture_index,
+        hydro_index=hydro_index,
+        warnlevel=warnlevel,
+        warnlevel_info_de=warnlevel_info_de,
+        warnlevel_info_fr=warnlevel_info_fr,
+        cdi_forecast_week2=cdi_forecast_week2,
     )
+
+
+def _compute_cdi_forecast_week2(bundle: DataBundle, region_id: int) -> int | None:
+    """Return the CDI forecast for valid_at ≈ today + 14 d. None if forecast horizon is shorter."""
+    forecast = bundle.forecast_df
+    if forecast.empty:
+        return None
+    target_date = bundle.data_timestamp + timedelta(days=14)
+    region_forecast = forecast[forecast["drought_region_id"] == region_id]
+    if region_forecast.empty:
+        return None
+    region_forecast = region_forecast.copy()
+    region_forecast["delta"] = (region_forecast["valid_at"] - target_date).abs()
+    closest = region_forecast.sort_values("delta").iloc[0]
+    if closest["delta"] > pd.Timedelta(days=5):
+        return None
+    if pd.isna(closest.get("cdi_p50")):
+        return None
+    return int(closest["cdi_p50"])

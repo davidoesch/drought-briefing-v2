@@ -1,0 +1,50 @@
+{
+  "33": {
+    "drought_region_id": 33,
+    "warnlevel": 2,
+    "info_de": "Mässige Gefahr",
+    "info_fr": "Danger limité",
+    "info_it": "pericolo moderato",
+    "valid_from": "2026-05-28T00:00:00"
+  },
+  "34": {
+    "drought_region_id": 34,
+    "warnlevel": 2,
+    "info_de": "Mässige Gefahr",
+    "info_fr": "Danger limité",
+    "info_it": "pericolo moderato",
+    "valid_from": "2026-05-28T00:00:00"
+  },
+  "35": {
+    "drought_region_id": 35,
+    "warnlevel": 2,
+    "info_de": "Mässige Gefahr",
+    "info_fr": "Danger limité",
+    "info_it": "pericolo moderato",
+    "valid_from": "2026-05-21T00:00:00"
+  },
+  "37": {
+    "drought_region_id": 37,
+    "warnlevel": 2,
+    "info_de": "Mässige Gefahr",
+    "info_fr": "Danger limité",
+    "info_it": "pericolo moderato",
+    "valid_from": "2026-05-21T00:00:00"
+  },
+  "38": {
+    "drought_region_id": 38,
+    "warnlevel": 2,
+    "info_de": "Mässige Gefahr",
+    "info_fr": "Danger limité",
+    "info_it": "pericolo moderato",
+    "valid_from": "2026-05-21T00:00:00"
+  },
+  "41": {
+    "drought_region_id": 41,
+    "warnlevel": 2,
+    "info_de": "Mässige Gefahr",
+    "info_fr": "Danger limité",
+    "info_it": "pericolo moderato",
+    "valid_from": "2026-05-21T00:00:00"
+  }
+}

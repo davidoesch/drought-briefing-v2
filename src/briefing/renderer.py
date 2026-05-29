@@ -1,0 +1,159 @@
+# src/briefing/renderer.py
+from __future__ import annotations
+
+import logging
+import re
+from datetime import datetime
+from pathlib import Path
+from typing import Literal
+
+logger = logging.getLogger(__name__)
+
+import yaml
+from jinja2 import BaseLoader, Environment, StrictUndefined
+
+from src.briefing.schemas import RulesetSchema
+from src.models import BriefingDocument, CantonReport, MapSpec
+
+_EACH_OPEN = re.compile(r"\{\{#each\s+([^\s}]+)\s*\}\}")
+_EACH_CLOSE = re.compile(r"\{\{/each\}\}")
+_THIS_FIELD = re.compile(r"\{\{\s*this\.([^\s}]+)\s*\}\}")
+_THIS_BARE = re.compile(r"\{\{\s*this\s*\}\}")
+# Also replaces `this.field` inside other expressions (e.g. subscripts like [this.field])
+_THIS_INPLACE = re.compile(r"\bthis\.")
+
+
+def _handlebars_to_jinja2(src: str) -> str:
+    src = _EACH_OPEN.sub(r"{% for item in \1 %}", src)
+    src = _EACH_CLOSE.sub("{% endfor %}", src)
+    src = _THIS_FIELD.sub(r"{{ item.\1 }}", src)
+    src = _THIS_BARE.sub(r"{{ item }}", src)
+    # Replace any remaining `this.` references inside Jinja2 expressions
+    src = _THIS_INPLACE.sub("item.", src)
+    return src
+
+
+def load_ruleset(path: Path) -> RulesetSchema:
+    """Load YAML, validate via Pydantic, return the schema object."""
+    raw = yaml.safe_load(path.read_text(encoding="utf-8"))
+
+    if not isinstance(raw, dict):
+        raise ValueError(f"Expected a YAML mapping at the top level, got {type(raw).__name__}")
+
+    # NomenclatureSpec wraps the raw mapping under an `indicators` key for type clarity.
+    if "nomenclature" in raw and "indicators" not in raw["nomenclature"]:
+        raw["nomenclature"] = {"indicators": raw["nomenclature"]}
+
+    return RulesetSchema.model_validate(raw)
+
+
+def _format_date(value: datetime | str, pattern: str) -> str:
+    if isinstance(value, str):
+        value = datetime.fromisoformat(value)
+    mapping = {
+        "DD.MM.YYYY": "%d.%m.%Y",
+        "YYYY-MM-DD": "%Y-%m-%d",
+    }
+    if pattern not in mapping:
+        raise ValueError(f"Unsupported date pattern: {pattern!r}. Known: {sorted(mapping)}")
+    return value.strftime(mapping[pattern])
+
+
+def _resolve_handlungsempfehlungen_fallback(spec):
+    """
+    Return a copy of the by_gefahrenstufe dict where fallback levels are replaced
+    by the empfehlungen of their target level (chain-resolved).
+    """
+    resolved = {}
+    for level, entry in spec.by_gefahrenstufe.items():
+        current = entry
+        # Follow fallback chain until we find one with empfehlungen
+        seen = set()
+        while current.empfehlungen is None and current.fallback is not None:
+            if current.fallback in seen:
+                raise ValueError(f"Cyclic fallback chain at level {level}")
+            seen.add(current.fallback)
+            current = spec.by_gefahrenstufe[current.fallback]
+        if current.empfehlungen is None:
+            raise ValueError(f"Level {level} has no empfehlungen and no resolvable fallback")
+        resolved[level] = current
+    return resolved
+
+
+def _pick_template(template, locale: str, section_id: str) -> str:
+    if isinstance(template, str):
+        return template
+    if locale in template:
+        return template[locale]
+    if "de" in template:
+        logger.warning(
+            "Section %s missing locale=%r; falling back to 'de'", section_id, locale
+        )
+        return template["de"]
+    raise ValueError(f"Section {section_id} has no usable template for locale={locale!r}")
+
+
+def _make_trend_resolver(trend_spec, locale: str):
+    def trend(delta, key):
+        spec = trend_spec[key]
+        if abs(delta) <= spec.stable_tolerance:
+            return spec.stable[locale]
+        return (spec.increase if delta > 0 else spec.decrease)[locale]
+    return trend
+
+
+def render_briefing(
+    canton: CantonReport,
+    ruleset: RulesetSchema,
+    locale: Literal["de", "fr"] = "de",
+) -> BriefingDocument:
+    env = Environment(
+        loader=BaseLoader(),
+        undefined=StrictUndefined,
+        autoescape=False,
+    )
+    env.filters["format_date"] = _format_date
+    env.globals["format_date"] = _format_date
+    env.globals["trend"] = _make_trend_resolver(ruleset.trend, locale)
+    env.globals["nomenclature"] = ruleset.nomenclature.indicators
+    # Resolve fallback chains so the template never sees None.empfehlungen
+    resolved_he = type(ruleset.handlungsempfehlungen).model_construct(
+        source_ref=ruleset.handlungsempfehlungen.source_ref,
+        by_gefahrenstufe=_resolve_handlungsempfehlungen_fallback(ruleset.handlungsempfehlungen),
+    )
+    env.globals["handlungsempfehlungen"] = resolved_he
+    env.globals["canton"] = canton
+    # Expose data_sources and references as lists so Handlebars-style each loops work
+    env.globals["data_sources"] = list(ruleset.data_sources.values())
+    env.globals["references"] = list(ruleset.references.values())
+
+    sections: dict[str, str] = {}
+    for sec in ruleset.sections:
+        tmpl_src = _pick_template(sec.template, locale, sec.id)
+        tmpl_src = _handlebars_to_jinja2(tmpl_src)
+        sections[sec.id] = env.from_string(tmpl_src).render().strip()
+
+    # Lead
+    lead = ruleset.lead.warnstufe
+    headline = env.from_string(_handlebars_to_jinja2(lead.headline[locale])).render()
+    meta = env.from_string(_handlebars_to_jinja2(lead.meta[locale])).render()
+    lead_maps = [
+        MapSpec(
+            id=m.id,
+            title_de=m.title.get("de", ""),
+            title_fr=m.title.get("fr", ""),
+            source=m.source,
+            style=m.style,
+        )
+        for m in lead.maps
+    ]
+
+    return BriefingDocument(
+        sections=sections,
+        report=canton,
+        locale=locale,
+        generated_at=datetime.now(),
+        lead_maps=lead_maps,
+        lead_headline=headline,
+        lead_meta=meta,
+    )

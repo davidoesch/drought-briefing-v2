@@ -4,8 +4,6 @@ from typing import Final
 
 DATA_DIR: Final[Path] = Path(__file__).parent.parent / "data"
 
-BERNE_REGION_IDS: Final[frozenset[int]] = frozenset({33, 34, 35, 37, 38, 41})
-
 BERNE_REGION_NAMES: Final[dict[int, str]] = {
     33: "Unteres Emmental",
     34: "Berner Mittelland",
@@ -18,10 +16,19 @@ BERNE_REGION_NAMES: Final[dict[int, str]] = {
 CDI_LABELS: Final[dict[int, str]] = {
     0: "Keine Trockenheit",
     1: "Leichte Trockenheit",
-    2: "Mässige Trockenheit",
+    2: "Erhebliche Trockenheit",
     3: "Schwere Trockenheit",
     4: "Extreme Trockenheit",
     5: "Ausserordentliche Trockenheit",
+}
+
+CDI_LABELS_FR: Final[dict[int, str]] = {
+    0: "Pas de sécheresse",
+    1: "Sécheresse légère",
+    2: "Sécheresse notable",
+    3: "Sécheresse sévère",
+    4: "Sécheresse extrême",
+    5: "Sécheresse exceptionnelle",
 }
 
 CDI_COLOURS: Final[dict[int, str]] = {
@@ -33,7 +40,7 @@ CDI_COLOURS: Final[dict[int, str]] = {
     5: "#2c3e50",
 }
 
-STAC_BASE_URL: Final[str] = "https://data.geo.admin.ch/api/stac/v0.9"
+STAC_BASE_URL: Final[str] = "https://data.geo.admin.ch/api/stac/v1"
 STAC_COLLECTION: Final[str] = "ch.bafu.trockenheitsdaten-numerisch"
 
 CURRENT_ZIP_NAME: Final[str] = (
@@ -47,6 +54,17 @@ REFERENCE_ZIP_NAME: Final[str] = (
 )
 
 GEOJSON_FIXTURE: Final[Path] = DATA_DIR / "berne_warnregionen.geojson"
+
+# Canton → drought region mapping.
+# Bern is the launch canton. Other cantons will be added when their
+# canton→regions mapping is curated.
+CANTON_TO_REGIONS: Final[dict[int, frozenset[int]]] = {
+    2: frozenset({33, 34, 35, 37, 38, 41}),  # Bern (BFS canton ID 2)
+}
+
+CANTON_NAMES: Final[dict[int, dict[str, str]]] = {
+    2: {"de": "Bern", "fr": "Berne", "it": "Berna"},
+}
 
 DATA_STALENESS_DAYS: Final[int] = 14
 INDICATOR_COLUMNS: Final[list[str]] = [

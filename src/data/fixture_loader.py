@@ -78,11 +78,17 @@ def load() -> DataBundle:
     reference_df, _ = _read_csv_from_zip(
         DATA_DIR / REFERENCE_ZIP_NAME, "regions.csv"
     )
+    forecast_raw, _ = _read_csv_from_zip(
+        DATA_DIR / CURRENT_ZIP_NAME, "weekly_forecast_regions.csv"
+    )
+    forecast_df = forecast_raw.copy()
+    forecast_df["valid_at"] = pd.to_datetime(forecast_df["valid_at"], format="%d.%m.%Y", errors="coerce")
     data_timestamp = _parse_timestamp(comment_lines)
     return DataBundle(
         current_df=_parse_dates(current_df),
         historic_df=_parse_dates(historic_df),
         reference_df=reference_df,
+        forecast_df=forecast_df,
         data_timestamp=data_timestamp,
         source="fixture",
     )

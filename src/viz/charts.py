@@ -8,8 +8,10 @@ import pandas as pd
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 
+from src.i18n.strings import t
 
-def build_timeseries(historic_df: pd.DataFrame, region_id: int) -> go.Figure:
+
+def build_timeseries(historic_df: pd.DataFrame, region_id: int, lang: str = "de") -> go.Figure:
     region = historic_df[historic_df["drought_region_id"] == region_id].copy()
     region = region.sort_values("measured_at").tail(52)
 
@@ -42,20 +44,18 @@ def build_timeseries(historic_df: pd.DataFrame, region_id: int) -> go.Figure:
     )
 
     fig.add_hline(y=-0.84, line_dash="dot", line_color="orange",
-                  annotation_text="SPI-3m Schwelle (-0.84)", secondary_y=True)
+                  annotation_text=f"{t('chart_spi_threshold', lang)} (-0.84)", secondary_y=True)
     fig.add_hline(y=2, line_dash="dot", line_color="red",
-                  annotation_text="CDI Schwelle (2)", secondary_y=False)
+                  annotation_text=f"{t('chart_cdi_threshold', lang)} (2)", secondary_y=False)
 
     fig.update_layout(
-        title="Trockenheitsentwicklung - letzte 52 Wochen",
-        xaxis_title="Datum",
+        title=t("chart_title", lang),
+        xaxis_title=t("chart_x_axis", lang),
         legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
         height=350,
         margin=dict(l=40, r=40, t=60, b=40),
-        plot_bgcolor="#0d1117",
-        paper_bgcolor="#0d1117",
-        font_color="#c9d1d9",
     )
+    
     fig.update_yaxes(title_text="CDI (0-5)", secondary_y=False, range=[0, 5.5])
     fig.update_yaxes(title_text="SPI-3m", secondary_y=True)
 

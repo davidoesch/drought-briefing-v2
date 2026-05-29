@@ -19,9 +19,9 @@ def test_current_df_has_expected_columns():
 
 def test_current_df_has_berne_regions():
     bundle = load()
-    from config.settings import BERNE_REGION_IDS
+    from config.settings import CANTON_TO_REGIONS
     ids_in_data = set(bundle.current_df["drought_region_id"].unique())
-    assert BERNE_REGION_IDS.issubset(ids_in_data)
+    assert CANTON_TO_REGIONS[2].issubset(ids_in_data)
 
 
 def test_historic_df_has_multiple_weeks():

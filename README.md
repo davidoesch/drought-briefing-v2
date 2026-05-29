@@ -1,5 +1,7 @@
 # Drought-Briefing
 
+[Dashboard](https://cboodnee.github.io/Drought-Briefing/)
+
 ## Next Steps
 
 ### UI/UX
