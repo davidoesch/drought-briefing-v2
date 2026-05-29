@@ -120,26 +120,38 @@ canton_label = canton.canton_name_de if lang == "de" else canton.canton_name_fr
 # ── Tab 1: Allgemeine Lage (Kanton) ────────────────────────────────────────
 if view_tab == "canton":
     st.title(f"{t('export_doc_title', lang)} {canton_label}")
-    bg, text_colour = _warnstufe_palette(canton.max_warnlevel)
-    st.markdown(
-        f"""<div style="background:{bg};border-radius:8px;padding:18px;color:{text_colour};">
-        <div style="font-size:11px;opacity:.85;">{t("current_warnlevel", lang)}</div>
-        <div style="font-size:28px;font-weight:700;">{doc.lead_headline}</div>
-        <div style="font-size:12px;opacity:.85;">{doc.lead_meta}</div>
-        </div>""",
-        unsafe_allow_html=True,
-    )
 
-    st.divider()
+    # ── Two-column hero: overview text left, map tabs right ────────────────
+    left_col, right_col = st.columns([1, 1])
 
-    # ── Two side-by-side maps ──────────────────────────────────────────────────
-    map_cols = st.columns(2)
-    for col, map_spec in zip(map_cols, doc.lead_maps):
-        with col:
-            st.subheader(map_spec.title_de if lang == "de" else map_spec.title_fr)
-            m = build_canton_map(canton, map_spec)
-            st.components.v1.html(m._repr_html_(), height=250)
+    with left_col:
+        bg, text_colour = _warnstufe_palette(canton.max_warnlevel)
+        st.markdown(
+            f"""<div style="background:{bg};border-radius:8px;padding:18px;color:{text_colour};">
+            <div style="font-size:11px;opacity:.85;">{t("current_warnlevel", lang)}</div>
+            <div style="font-size:28px;font-weight:700;">{doc.lead_headline}</div>
+            <div style="font-size:12px;opacity:.85;">{doc.lead_meta}</div>
+            </div>""",
+            unsafe_allow_html=True,
+        )
+        allg_sec = next((s for s in rs.sections if s.id == "allgemeine-lage"), None)
+        if allg_sec:
+            title = allg_sec.title.get(lang, allg_sec.title.get("de", allg_sec.id))
+            st.markdown(f"## {title}")
+            st.markdown(doc.sections["allgemeine-lage"])
 
+    with right_col:
+        tab_labels = [
+            (map_spec.title_de if lang == "de" else map_spec.title_fr)
+            for map_spec in doc.lead_maps
+        ]
+        tabs = st.tabs(tab_labels)
+        for tab, map_spec in zip(tabs, doc.lead_maps):
+            with tab:
+                m = build_canton_map(canton, map_spec)
+                st.components.v1.html(m._repr_html_(), height=300)
+
+    # ── CDI legend (full width) ────────────────────────────────────────────
     labels = DROUGHT_LEGEND[lang]
     items_html = "".join(
         f"""<span style="display:inline-flex;align-items:center;margin-right:18px;white-space:nowrap;">
@@ -149,7 +161,6 @@ if view_tab == "canton":
         </span>"""
         for colour, label in zip(DROUGHT_COLOURS, labels)
     )
-     
     st.markdown(
         f'<div style="display:flex;flex-wrap:wrap;align-items:center;'
         f'margin-top: 10px; padding: 0; gap: 8px;">'
@@ -160,9 +171,9 @@ if view_tab == "canton":
     st.divider()
 
     for sec in rs.sections:
-        if sec.id == "regionen":
+        if sec.id in ("regionen", "allgemeine-lage"):
             continue
-            
+
         title = sec.title.get(lang, sec.title.get("de", sec.id))
         st.markdown(f"## {title}")
         st.markdown(doc.sections[sec.id])
