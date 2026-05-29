@@ -78,7 +78,7 @@ def _build_folium_choropleth(values: dict[int, int]) -> folium.Map:
     m = folium.Map(
         location=[46.80, 7.55],
         zoom_start=9,
-        tiles="CartoDB dark_matter",
+        tiles="CartoDB positron",
     )
 
     def style_fn(feature):
