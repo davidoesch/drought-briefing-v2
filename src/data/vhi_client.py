@@ -15,8 +15,6 @@ import io
 import logging
 import warnings
 from pathlib import Path
-from typing import Union
-
 import pandas as pd
 
 from config.settings import VHI_FIXTURE, VHI_URL
@@ -54,9 +52,13 @@ def _load_from_fixture(region_ids: list[int]) -> dict[int, float]:
 
 
 def _parse_csv(
-    source: Union[str, Path, io.StringIO],
+    source: str | Path | io.StringIO,
     region_ids: list[int],
 ) -> dict[int, float]:
     df = pd.read_csv(source)
     df = df[df["REGION_NR"].isin(region_ids)]
-    return {int(row["REGION_NR"]): float(row["vhi_mean"]) for _, row in df.iterrows()}
+    result = dict(zip(df["REGION_NR"].astype(int), df["vhi_mean"].astype(float)))
+    missing = set(region_ids) - set(result.keys())
+    if missing:
+        logger.warning("VHI data missing for region IDs: %s", sorted(missing))
+    return result

@@ -27,9 +27,18 @@ def test_parse_csv_returns_requested_regions():
     assert 99 not in result
 
 
-def test_parse_csv_ignores_availability_percentage():
+def test_parse_csv_returns_only_vhi_mean_values():
     result = _parse_csv(io.StringIO(_CSV_BODY), [33])
     assert set(result.keys()) == {33}
+    assert result[33] == pytest.approx(61.8)  # vhi_mean, not availability_percentage
+
+
+def test_parse_csv_warns_when_region_missing(caplog):
+    import logging
+    with caplog.at_level(logging.WARNING, logger="src.data.vhi_client"):
+        result = _parse_csv(io.StringIO(_CSV_BODY), [999])
+    assert result == {}
+    assert "999" in caplog.text
 
 
 @responses.activate
