@@ -57,7 +57,8 @@ Pipeline-first: **DataBundle → CantonReport → BriefingDocument → UI/Export
 
 **i18n layer** (`src/i18n/strings.py`):
 - `t(key, lang)` looks up UI strings; falls back to German if key or lang is missing.
-- `get_cdi_labels(lang)` and `get_region_names(lang)` return lang-specific dicts. Supported languages: `"de"` and `"fr"`.
+- `get_cdi_labels(lang)` returns the CDI label dict for the given language.
+- `get_region_names(lang)` returns `REGION_NAMES_FR` or `REGION_NAMES_DE` from settings — covers all 38 Swiss drought warning regions in both languages. Supported languages: `"de"` and `"fr"`.
 
 ## Key Models (`src/models.py`)
 
@@ -79,8 +80,14 @@ Two deployment targets:
 
 ## Key Constants (`config/settings.py`)
 
-- `CANTON_TO_REGIONS = {2: frozenset({33, 34, 35, 37, 38, 41})}` — maps BFS canton ID to its drought Warnregionen. Bern (ID 2) is the launch canton; region 53 Freiberge is Canton Jura and excluded.
-- `CANTON_NAMES` — bilingual canton names keyed by BFS canton ID.
+`settings.py` loads `data/kantone_warnregionen.json` at import time (`_KANTONE`) to derive several constants:
+
+- `CANTON_TO_REGIONS` — maps BFS canton ID (1–26) to its drought Warnregionen. Bern (ID 2) is hardcoded to a curated 6-region subset `{33,34,35,37,38,41}` (excludes cross-canton regions like Freiberge). All other 25 cantons use the full region list from the JSON.
+- `CANTON_NAMES` — bilingual (de/fr) canton names for all 26 cantons, hardcoded.
+- `CANTON_CENTER_POINTS` — LV95 center coordinates per canton, parsed from the `MAPGEO` field in the JSON. Used by `maps.py::_fetch_canton_geometry()` to zoom the identify call correctly for each canton.
+- `REGION_NAMES_DE` — German names for all 38 Swiss drought warning regions, derived from the JSON.
+- `REGION_NAMES_FR` — French names for all 38 regions, hardcoded.
+- `BERNE_REGION_NAMES` — kept for backward compatibility; prefer `REGION_NAMES_DE`.
 - `DATA_STALENESS_DAYS = 14` — threshold for quality error status.
 - `INDICATOR_COLUMNS` — the 10 columns expected in `current_df`; used to compute coverage %.
 
