@@ -28,7 +28,10 @@ def compute_discharge_stats(region_ids: Collection[int], bundle: DataBundle) -> 
     if cur.empty:
         return DischargeStats(n_total=0, n_low=0, n_very_low=0, pct_low=0)
 
-    cur["doy"] = pd.to_datetime(cur["measured_at"]).dt.dayofyear
+    # current_stations is a weekly time series — keep only the latest row per station.
+    cur["measured_at"] = pd.to_datetime(cur["measured_at"])
+    cur = cur.sort_values("measured_at").groupby("hydro_station_id", as_index=False).last()
+    cur["doy"] = cur["measured_at"].dt.dayofyear
 
     ref = reference[reference["label"] == _DISCHARGE_LABEL][
         ["hydro_station_id", "doy", "threshold1", "q347"]

@@ -51,6 +51,20 @@ def test_filters_by_region():
     assert stats.n_total == 1
 
 
+def test_uses_latest_row_per_station():
+    # A station appears in 3 weekly rows; only the latest (low) value must count.
+    cur = [
+        {"hydro_station_id": "0078", "measured_at": datetime(2025, 5, 12), "value": 9.0, "label": "Abfluss"},
+        {"hydro_station_id": "0078", "measured_at": datetime(2025, 5, 19), "value": 8.0, "label": "Abfluss"},
+        {"hydro_station_id": "0078", "measured_at": datetime(2025, 5, 26), "value": 2.0, "label": "Abfluss"},  # latest, doy 146
+    ]
+    ref = [{"hydro_station_id": "0078", "doy": 146, "threshold1": 5.0, "q347": 3.0, "label": "Abfluss"}]
+    stats = compute_discharge_stats([33], _bundle(cur, ref, {"0078": 33}))
+    assert stats.n_total == 1   # one station, not three rows
+    assert stats.n_low == 1
+    assert stats.n_very_low == 1
+
+
 def test_zero_stations():
     stats = compute_discharge_stats([99], _bundle([], [], {}))
     assert stats.n_total == 0

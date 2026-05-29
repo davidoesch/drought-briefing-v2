@@ -66,6 +66,15 @@ def _parse_timestamp(comment_lines: list[str]) -> datetime:
     return datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
 
 
+def load_station_region_map() -> dict[str, int]:
+    """Load the curated station→region mapping (a local artifact, not in STAC)."""
+    map_path = DATA_DIR / STATION_REGION_MAP_NAME
+    if not map_path.exists():
+        return {}
+    raw_map = json.loads(map_path.read_text(encoding="utf-8"))
+    return {str(k).strip(): int(v) for k, v in raw_map.items()}
+
+
 def _read_stations_csv(zip_path: Path, filename: str) -> pd.DataFrame:
     """Read a station CSV, forcing hydro_station_id to str (leading zeros matter)."""
     if not zip_path.exists():
@@ -106,11 +115,7 @@ def load() -> DataBundle:
 
     current_stations_df = _read_stations_csv(DATA_DIR / CURRENT_ZIP_NAME, CURRENT_STATIONS_CSV)
     reference_stations_df = _read_stations_csv(DATA_DIR / REFERENCE_ZIP_NAME, REFERENCE_STATIONS_CSV)
-    map_path = DATA_DIR / STATION_REGION_MAP_NAME
-    station_region_map: dict[str, int] = {}
-    if map_path.exists():
-        raw_map = json.loads(map_path.read_text(encoding="utf-8"))
-        station_region_map = {str(k).strip(): int(v) for k, v in raw_map.items()}
+    station_region_map = load_station_region_map()
 
     return DataBundle(
         current_df=_parse_dates(current_df),

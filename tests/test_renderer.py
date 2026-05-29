@@ -91,7 +91,7 @@ def test_render_briefing_de_section_keys(_bern_canton):
 
     assert set(doc.sections.keys()) >= {"allgemeine-lage", "handlungsoptionen", "regionen"}
     assert "Bern" in doc.sections["allgemeine-lage"]
-    assert "Mässige Gefahr" in doc.sections["allgemeine-lage"]
+    assert "Bodenfeuchte" in doc.sections["allgemeine-lage"]
     # Maps spec preserved
     assert len(doc.lead_maps) == 2
     assert {m.id for m in doc.lead_maps} == {"cdi_current", "cdi_forecast_week2"}
@@ -102,7 +102,7 @@ def test_render_briefing_fr_uses_french_strings(_bern_canton):
     doc = render_briefing(canton, ruleset, locale="fr")
 
     assert "Berne" in doc.sections["allgemeine-lage"]
-    assert "Danger limité" in doc.sections["allgemeine-lage"]
+    assert "humidité du sol" in doc.sections["allgemeine-lage"]
     assert doc.locale == "fr"
     assert "Mässige" not in doc.lead_headline  # FR headline shouldn't contain German
     assert "Danger limité" in doc.lead_headline or doc.lead_headline != ""
