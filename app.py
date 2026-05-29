@@ -60,12 +60,16 @@ DROUGHT_COLOURS = ["#97E8CB", "#F9E5AE", "#F1B981", "#D18C47", "#8A5A42"]
 
 # ── Sidebar ────────────────────────────────────────────────────────────────
 with st.sidebar:
+    # 1. Language Selector
+    lang_options = ["de", "fr"]
+    lang_idx = lang_options.index(st.session_state.get("lang_selector", "de"))
+    
     lang = st.radio(
         "Sprache / Langue",
-        options=["de", "fr"],
+        options=lang_options,
         format_func=lambda l: "Deutsch" if l == "de" else "Français",
         horizontal=True,
-        index=0,
+        index=lang_idx,
         key="lang_selector"
     )
 
@@ -73,22 +77,32 @@ with st.sidebar:
     st.caption(t("sidebar_caption", lang))
     st.divider()
 
+    # 2. Canton Selector
     canton_options = sorted(CANTON_TO_REGIONS.keys())
+    curr_canton = st.session_state.get("canton_selector", canton_options[0])
+    canton_idx = canton_options.index(curr_canton) if curr_canton in canton_options else 0
+    
     selected_canton_id = st.selectbox(
         t("canton_label", lang),
         options=canton_options,
         format_func=lambda cid: CANTON_NAMES[cid].get(lang, CANTON_NAMES[cid]["de"]),
-        index=0,
+        index=canton_idx,
         key="canton_selector"
     )
     
     st.divider()
     
+    # 3. View Tab Selector
+    nav_options = ["canton", "regions"]
+    curr_nav = st.session_state.get("view_tab_selector", "canton")
+    nav_idx = nav_options.index(curr_nav) if curr_nav in nav_options else 0
+    
     view_tab = st.radio(
         "Navigation",
-        options=["canton", "regions"],
+        options=nav_options,
         format_func=lambda x: t(f"tab_{x}", lang),
         label_visibility="collapsed",
+        index=nav_idx,
         key="view_tab_selector"
     )
 
