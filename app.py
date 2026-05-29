@@ -138,18 +138,19 @@ if view_tab == "canton":
         if allg_sec:
             title = allg_sec.title.get(lang, allg_sec.title.get("de", allg_sec.id))
             st.markdown(f"## {title}")
-            st.markdown(doc.sections["allgemeine-lage"])
+            st.markdown(doc.sections.get("allgemeine-lage", ""))
 
     with right_col:
-        tab_labels = [
-            (map_spec.title_de if lang == "de" else map_spec.title_fr)
-            for map_spec in doc.lead_maps
-        ]
-        tabs = st.tabs(tab_labels)
-        for tab, map_spec in zip(tabs, doc.lead_maps):
-            with tab:
-                m = build_canton_map(canton, map_spec)
-                st.components.v1.html(m._repr_html_(), height=300)
+        if doc.lead_maps:
+            tab_labels = [
+                (map_spec.title_de if lang == "de" else map_spec.title_fr)
+                for map_spec in doc.lead_maps
+            ]
+            tabs = st.tabs(tab_labels)
+            for tab, map_spec in zip(tabs, doc.lead_maps):
+                with tab:
+                    m = build_canton_map(canton, map_spec)
+                    st.components.v1.html(m._repr_html_(), height=300)
 
     # ── CDI legend (full width) ────────────────────────────────────────────
     labels = DROUGHT_LEGEND[lang]
