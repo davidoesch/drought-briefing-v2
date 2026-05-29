@@ -46,7 +46,7 @@ STAC_COLLECTION: Final[str] = "ch.bafu.trockenheitsdaten-numerisch"
 VHI_URL: Final[str] = (
     "https://data.geo.admin.ch/ch.swisstopo.swisseo_vhi_v100"
     "/swisseo_vhi_v100"
-    "/ch.swisstopo.swisseo_vhi_v100_current_vegetation-warnregionen.csv"
+    "/ch.swisstopo.swisseo_vhi_v100_current_vegetation-warnregions.csv"
 )
 VHI_FIXTURE: Final[Path] = DATA_DIR / "vhi_fixture.csv"
 
