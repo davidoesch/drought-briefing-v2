@@ -121,19 +121,21 @@ canton_label = canton.canton_name_de if lang == "de" else canton.canton_name_fr
 if view_tab == "canton":
     st.title(f"{t('export_doc_title', lang)} {canton_label}")
 
-    # ── Two-column hero: overview text left, map tabs right ────────────────
+    # ── Full-width warnlevel badge ─────────────────────────────────────────
+    bg, text_colour = _warnstufe_palette(canton.max_warnlevel)
+    st.markdown(
+        f"""<div style="background:{bg};border-radius:8px;padding:18px;color:{text_colour};">
+        <div style="font-size:11px;opacity:.85;">{t("current_warnlevel", lang)}</div>
+        <div style="font-size:28px;font-weight:700;">{doc.lead_headline}</div>
+        <div style="font-size:12px;opacity:.85;">{doc.lead_meta}</div>
+        </div>""",
+        unsafe_allow_html=True,
+    )
+
+    # ── Two columns: overview text left, map + legend right ───────────────
     left_col, right_col = st.columns([1, 1])
 
     with left_col:
-        bg, text_colour = _warnstufe_palette(canton.max_warnlevel)
-        st.markdown(
-            f"""<div style="background:{bg};border-radius:8px;padding:18px;color:{text_colour};">
-            <div style="font-size:11px;opacity:.85;">{t("current_warnlevel", lang)}</div>
-            <div style="font-size:28px;font-weight:700;">{doc.lead_headline}</div>
-            <div style="font-size:12px;opacity:.85;">{doc.lead_meta}</div>
-            </div>""",
-            unsafe_allow_html=True,
-        )
         allg_sec = next((s for s in rs.sections if s.id == "allgemeine-lage"), None)
         if allg_sec:
             title = allg_sec.title.get(lang, allg_sec.title.get("de", allg_sec.id))
@@ -142,32 +144,39 @@ if view_tab == "canton":
 
     with right_col:
         if doc.lead_maps:
-            tab_labels = [
-                (map_spec.title_de if lang == "de" else map_spec.title_fr)
-                for map_spec in doc.lead_maps
+            # Radio switcher renders only the active map, avoiding the Leaflet
+            # hidden-tab initialisation bug that breaks st.tabs() for iframes.
+            map_labels = [
+                (ms.title_de if lang == "de" else ms.title_fr)
+                for ms in doc.lead_maps
             ]
-            tabs = st.tabs(tab_labels)
-            for tab, map_spec in zip(tabs, doc.lead_maps):
-                with tab:
-                    m = build_canton_map(canton, map_spec)
-                    st.components.v1.html(m._repr_html_(), height=300)
+            selected_map_idx = st.radio(
+                "Karte",
+                options=range(len(doc.lead_maps)),
+                format_func=lambda i: map_labels[i],
+                horizontal=True,
+                label_visibility="collapsed",
+                key=f"map_sel_{selected_canton_id}",
+            )
+            m = build_canton_map(canton, doc.lead_maps[selected_map_idx])
+            st.components.v1.html(m._repr_html_(), height=300)
 
-    # ── CDI legend (full width) ────────────────────────────────────────────
-    labels = DROUGHT_LEGEND[lang]
-    items_html = "".join(
-        f"""<span style="display:inline-flex;align-items:center;margin-right:18px;white-space:nowrap;">
-            <span style="display:inline-block;width:14px;height:14px;background:{colour};
-                         border-radius:2px;margin-right:6px;flex-shrink:0;"></span>
-            <span style="font-size:13px;">{label}</span>
-        </span>"""
-        for colour, label in zip(DROUGHT_COLOURS, labels)
-    )
-    st.markdown(
-        f'<div style="display:flex;flex-wrap:wrap;align-items:center;'
-        f'margin-top: 10px; padding: 0; gap: 8px;">'
-        f'{items_html}</div>',
-        unsafe_allow_html=True,
-    )
+            # ── CDI legend directly below map ──────────────────────────────
+            labels = DROUGHT_LEGEND[lang]
+            items_html = "".join(
+                f"""<span style="display:inline-flex;align-items:center;margin-right:14px;white-space:nowrap;">
+                    <span style="display:inline-block;width:12px;height:12px;background:{colour};
+                                 border-radius:2px;margin-right:5px;flex-shrink:0;"></span>
+                    <span style="font-size:12px;">{label}</span>
+                </span>"""
+                for colour, label in zip(DROUGHT_COLOURS, labels)
+            )
+            st.markdown(
+                f'<div style="display:flex;flex-wrap:wrap;align-items:center;'
+                f'margin-top:8px;padding:0;gap:6px;">'
+                f'{items_html}</div>',
+                unsafe_allow_html=True,
+            )
 
     st.divider()
 
