@@ -257,7 +257,14 @@ with st.expander(t("quality_expander", lang)):
         )
 
 with export_placeholder:
-    html_str = to_html(doc, canton, rs)
+    # Update the to_html call to include expert_notes
+    html_str = to_html(
+        doc=doc, 
+        canton_report=canton, 
+        ruleset=rs, 
+        expert_notes=st.session_state.expert_notes
+    )
+    
     st.download_button(
         label=t("btn_html", lang),
         data=html_str.encode("utf-8"),
