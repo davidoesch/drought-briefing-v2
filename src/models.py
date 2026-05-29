@@ -85,6 +85,17 @@ class CantonReport:
     n_regions_by_soil_moisture_index: dict[int, int]
     n_regions_by_hydro_index: dict[int, int]
     quality: QualityReport
+    n_regions_dry: int = 0
+    cdi_min_dry: int | None = None
+    cdi_max_dry: int | None = None
+    cdi_situation_delta: int = 0
+    mean_precip_sum_1m: float = 0.0
+    mean_precip_sum_3m: float = 0.0
+    precip_index_min: int = 1
+    precip_index_max: int = 1
+    n_regions_with_precip_deficit: int = 0
+    n_regions_with_soil_moisture_deficit: int = 0
+    discharge: DischargeStats = field(default_factory=lambda: DischargeStats(0, 0, 0, 0))
 
 
 @dataclass

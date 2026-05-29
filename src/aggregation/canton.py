@@ -5,6 +5,7 @@ from collections import Counter
 
 from config.settings import CANTON_NAMES, CANTON_TO_REGIONS
 from src.aggregation.regional import compute_region_report
+from src.aggregation.stations import compute_discharge_stats
 from src.data import vhi_client
 from src.models import CantonReport, DataBundle, QualityReport, WarnkarteEntry
 
@@ -45,6 +46,31 @@ def compute_canton_report(
 
     quality = _fold_quality([r.quality for r in region_reports])
 
+    # --- New aggregates (template revision 2026-05-29) ---
+    dry = [r for r in region_reports if r.cdi > 1]
+    n_regions_dry = len(dry)
+    cdi_min_dry = min((r.cdi for r in dry), default=None)
+    cdi_max_dry = max((r.cdi for r in dry), default=None)
+
+    sum_current_cdi = sum(r.cdi for r in region_reports)
+    sum_forecast_cdi = sum(
+        r.cdi_forecast_week2 if r.cdi_forecast_week2 is not None else r.cdi
+        for r in region_reports
+    )
+    cdi_situation_delta = sum_forecast_cdi - sum_current_cdi
+
+    mean_precip_sum_1m = round(sum(r.precip_sum_1m for r in region_reports) / len(region_reports), 1)
+    mean_precip_sum_3m = round(sum(r.precip_sum_3m for r in region_reports) / len(region_reports), 1)
+
+    precip_indices = [r.precip_1m_index for r in region_reports]
+    precip_index_min = min(precip_indices)
+    precip_index_max = max(precip_indices)
+
+    n_precip_deficit = sum(1 for r in region_reports if r.precip_1m_index >= 2)
+    n_soil_deficit = sum(1 for r in region_reports if r.soil_moisture_index >= 2)
+
+    discharge = compute_discharge_stats(region_ids, bundle)
+
     names = CANTON_NAMES[canton_id]
     return CantonReport(
         canton_id=canton_id,
@@ -60,6 +86,17 @@ def compute_canton_report(
         n_regions_by_soil_moisture_index=dict(n_soil),
         n_regions_by_hydro_index=dict(n_hydro),
         quality=quality,
+        n_regions_dry=n_regions_dry,
+        cdi_min_dry=cdi_min_dry,
+        cdi_max_dry=cdi_max_dry,
+        cdi_situation_delta=cdi_situation_delta,
+        mean_precip_sum_1m=mean_precip_sum_1m,
+        mean_precip_sum_3m=mean_precip_sum_3m,
+        precip_index_min=precip_index_min,
+        precip_index_max=precip_index_max,
+        n_regions_with_precip_deficit=n_precip_deficit,
+        n_regions_with_soil_moisture_deficit=n_soil_deficit,
+        discharge=discharge,
     )
 
 
