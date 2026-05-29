@@ -49,7 +49,6 @@ SWISSTOPO_WMS = "https://wms.geo.admin.ch/"
 # Verified layer names from WMS GetCapabilities / opendata.swiss
 LAYER_RELIEF  = "ch.swisstopo.swissalti3d-reliefschattierung"
 LAYER_DROUGHT = "ch.bafu.trockenheitsindex"
-DROUGHT_TIME  = "1"   # time=1 → current situation
 
 # Canton boundary: identify endpoint uses this layer
 LAYER_CANTONS = "ch.swisstopo.swissboundaries3d-kanton-flaeche.fill"
@@ -150,6 +149,7 @@ def build_map(
     selected_report: Optional[RegionReport] = None,
     all_reports: Optional[list[RegionReport]] = None,
     canton_id: int = 2,
+    wms_time: str = "1",
 ) -> folium.Map:
     """
     Layer stack (bottom → top):
@@ -179,10 +179,11 @@ def build_map(
     ).add_to(m)
 
     delta_opacity = max(0.0, OPACITY_INSIDE - OPACITY_OUTSIDE)
+    drought_url = f"{SWISSTOPO_WMS}?time={wms_time}"
 
     # ── 2. Drought index Layer A – full extent at OPACITY_OUTSIDE ────────────
     folium.WmsTileLayer(
-        url=SWISSTOPO_WMS,
+        url=drought_url,
         layers=LAYER_DROUGHT,
         fmt="image/png",
         transparent=True,
@@ -191,12 +192,11 @@ def build_map(
         name="Trockenheitsindex (Basis)",
         overlay=True,
         opacity=OPACITY_OUTSIDE,
-        extra_params={"time": DROUGHT_TIME},
     ).add_to(m)
 
     # ── 3. Drought index Layer B – full extent at delta opacity ──────────────
     folium.WmsTileLayer(
-        url=SWISSTOPO_WMS,
+        url=drought_url,
         layers=LAYER_DROUGHT,
         fmt="image/png",
         transparent=True,
@@ -205,7 +205,6 @@ def build_map(
         name="Trockenheitsindex (innen)",
         overlay=True,
         opacity=delta_opacity,
-        extra_params={"time": DROUGHT_TIME},
         show=True,
     ).add_to(m)
 
@@ -248,7 +247,8 @@ def build_map(
 
 def build_canton_map(canton: CantonReport, map_spec: MapSpec) -> folium.Map:
     """Render an interactive folium map for the given CantonReport and MapSpec."""
-    return build_map(canton_id=canton.canton_id)
+    wms_time = "2" if "forecast" in map_spec.id else "1"
+    return build_map(canton_id=canton.canton_id, wms_time=wms_time)
 
 
 # ---------------------------------------------------------------------------
@@ -293,7 +293,7 @@ def build_export_map(
             return None
 
     relief_arr  = _get_wms(LAYER_RELIEF)
-    drought_arr = _get_wms(LAYER_DROUGHT, time=DROUGHT_TIME)
+    drought_arr = _get_wms(LAYER_DROUGHT, time="1")
 
     fig, ax = plt.subplots(figsize=(12, 9), facecolor="#0d1117")
     ax.set_facecolor("#0d1117")
