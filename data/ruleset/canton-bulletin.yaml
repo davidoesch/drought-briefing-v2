@@ -67,6 +67,28 @@ references:
     provider: "BAFU"
 
 # ---------------------------------------------------------------------------
+# Banner links rendered as a link row directly under the title.
+# ---------------------------------------------------------------------------
+banner:
+  - label: { de: "Trockenheitsportal", fr: "Portail sécheresse" }
+    url: "https://www.trockenheit.admin.ch"
+  - label: { de: "Waldbrandgefahr", fr: "Danger d'incendie de forêt" }
+    url: "https://www.waldbrandgefahr.ch"
+  - label: { de: "Naturgefahrenportal", fr: "Portail des dangers naturels" }
+    url: "https://www.naturgefahren.ch"
+
+# ---------------------------------------------------------------------------
+# Further reading links, rendered after the Allgemeine Lage section.
+# `url` may be a plain string or a map keyed by BFS canton ID (canton-specific).
+# ---------------------------------------------------------------------------
+weiterfuehrende_links:
+  - label: { de: "Grundwasserdaten Kanton Bern", fr: "Données des eaux souterraines canton de Berne" }
+    url:
+      2: "https://www.bvd.be.ch/de/start/themen/wasser/hydrologische-daten/regionale-grundwasserauswertung.html"
+  - label: { de: "Vegetationszustand (VHI)", fr: "État de la végétation (VHI)" }
+    url: "https://www.trockenheit.admin.ch/de/faktoren/vegetation/vegetationszustand-vhi"
+
+# ---------------------------------------------------------------------------
 # Nomenclature: maps an index level (1-5) to a localized text snippet.
 # The `field` / `fields` keys point to columns in weekly_current_regions /
 # monthly_current_regions / weekly_forecast_regions.
@@ -88,6 +110,10 @@ nomenclature:
       3: { de: "erhebliche Trockenheit",  fr: "sécheresse modérée",  it: "siccità moderata" }
       4: { de: "grosse Trockenheit",      fr: "sécheresse élevée",   it: "siccità elevata" }
       5: { de: "extreme Trockenheit",     fr: "sécheresse extrême",  it: "siccità estrema" }
+    # Range / single composition used by the deficit_range() renderer helper.
+    # Parts come from `adjective`; e.g. "leicht trocken bis sehr trocken".
+    range:  { de: "{min} bis {max}", fr: "{min} à {max}", it: "{min} a {max}" }
+    single: { de: "{val}",           fr: "{val}",         it: "{val}" }
 
   niederschlag:
     fields: [precip_1m_index, precip_3m_index, precip_24m_index]
@@ -97,6 +123,16 @@ nomenclature:
       3: { de: "ein erhebliches Niederschlagsdefizit",        fr: "déficit pluviométrique modéré",      it: "notevole deficit di precipitazioni" }
       4: { de: "ein grosses Niederschlagsdefizit",            fr: "déficit pluviométrique élevé",       it: "grande deficit di precipitazioni" }
       5: { de: "ein extremes Niederschlagsdefizit",           fr: "déficit pluviométrique extrême",     it: "estremo deficit di precipitazioni" }
+    # Bare adjectives + composition templates for the deficit_range() helper,
+    # e.g. "ein leichtes bis grosses Niederschlagsdefizit".
+    adjective:
+      1: { de: "geringes",    fr: "faible",   it: "scarso" }
+      2: { de: "leichtes",    fr: "léger",    it: "leggero" }
+      3: { de: "erhebliches", fr: "modéré",   it: "notevole" }
+      4: { de: "grosses",     fr: "élevé",    it: "grande" }
+      5: { de: "extremes",    fr: "extrême",  it: "estremo" }
+    range:  { de: "ein {min} bis {max} Niederschlagsdefizit", fr: "un déficit pluviométrique {min} à {max}", it: "un deficit di precipitazioni {min} a {max}" }
+    single: { de: "ein {val} Niederschlagsdefizit",           fr: "un déficit pluviométrique {val}",         it: "un deficit di precipitazioni {val}" }
 
   hydro:
     field: hydro_index
@@ -137,6 +173,15 @@ trend:
     increase: { de: "zunehmen",            fr: "augmenter",     it: "aumentare" }
     decrease: { de: "abnehmen",            fr: "diminuer",      it: "diminuire" }
     stable:   { de: "unverändert bleiben", fr: "rester stable", it: "rimanere stabile" }
+  # Canton-level CDI outlook. delta = sum(forecast cdi) - sum(current cdi):
+  # a rising CDI sum (delta > 0) means the situation deteriorates.
+  # Values are full predicates so the sentence "Die Situation {{ ... }}." reads correctly.
+  situation:
+    rule: "delta = sum(forecast cdi) - sum(current cdi); >0 worsens"
+    stable_tolerance: 0
+    increase: { de: "wird sich voraussichtlich verschlechtern", fr: "devrait se détériorer",  it: "—" }
+    decrease: { de: "wird sich voraussichtlich verbessern",     fr: "devrait s'améliorer",    it: "—" }
+    stable:   { de: "wird voraussichtlich unverändert bleiben", fr: "devrait rester stable",  it: "—" }
 
 # ---------------------------------------------------------------------------
 # Action recommendations per BAFU Gefahrenstufe (CDI 1-5).
@@ -225,13 +270,21 @@ sections:
       fr: "Situation générale"
     template:
       de: |
-        Im Kanton {{ canton.canton_name_de }} weisen aktuell {{ canton.n_regions_by_precip_index.get(2, 0) + canton.n_regions_by_precip_index.get(3, 0) + canton.n_regions_by_precip_index.get(4, 0) + canton.n_regions_by_precip_index.get(5, 0) }} von {{ canton.regions|length }} Warnregionen ein Niederschlagsdefizit auf.
-        Bei der Bodenfeuchte weisen {{ canton.n_regions_by_soil_moisture_index.get(2, 0) + canton.n_regions_by_soil_moisture_index.get(3, 0) + canton.n_regions_by_soil_moisture_index.get(4, 0) + canton.n_regions_by_soil_moisture_index.get(5, 0) }} von {{ canton.regions|length }} Warnregionen ein Defizit auf.
-        Die höchste Gefahrenstufe im Kanton ist Stufe {{ canton.max_warnlevel }} ({{ canton.max_warnlevel_info_de }}).
+        Im Kanton {{ canton.canton_name_de }} sind aktuell {{ canton.n_regions_dry }} von {{ canton.regions|length }} Regionen trocken{{#if canton.cdi_min_dry}} ({{ deficit_range(canton.cdi_min_dry, canton.cdi_max_dry, "cdi") }}){{/if}}. Die Situation {{ trend(canton.cdi_situation_delta, "situation") }}.
+
+        In den vergangenen 30 Tagen sind durchschnittlich rund {{ canton.mean_precip_sum_1m }} mm Niederschlag gefallen (3-Monats-Summe: {{ canton.mean_precip_sum_3m }} mm). Im langjährigen Vergleich bedeutet dies regional {{ deficit_range(canton.precip_index_min, canton.precip_index_max, "niederschlag") }}.
+
+        {{#if canton.discharge.n_total}}{{ canton.discharge.pct_low }} % der Abflussmessstationen im Kanton weisen aktuell einen niedrigen Abfluss (7-Tages-Mittel) auf. Davon {{ plural(canton.discharge.n_very_low, "liegt", "liegen") }} {{ canton.discharge.n_very_low }} {{ plural(canton.discharge.n_very_low, "Station", "Stationen") }} im sehr niedrigen Bereich.{{/if}}{{#if not canton.discharge.n_total}}Im Kanton liegen keine Abflussmessstationen vor.{{/if}}
+
+        Bei der Bodenfeuchte weisen {{ canton.n_regions_with_soil_moisture_deficit }} von {{ canton.regions|length }} Warnregionen ein Defizit auf.
       fr: |
-        Dans le canton de {{ canton.canton_name_fr }}, {{ canton.n_regions_by_precip_index.get(2, 0) + canton.n_regions_by_precip_index.get(3, 0) + canton.n_regions_by_precip_index.get(4, 0) + canton.n_regions_by_precip_index.get(5, 0) }} régions d'alerte sur {{ canton.regions|length }} présentent actuellement un déficit pluviométrique.
-        Concernant l'humidité du sol, {{ canton.n_regions_by_soil_moisture_index.get(2, 0) + canton.n_regions_by_soil_moisture_index.get(3, 0) + canton.n_regions_by_soil_moisture_index.get(4, 0) + canton.n_regions_by_soil_moisture_index.get(5, 0) }} régions sur {{ canton.regions|length }} présentent un déficit.
-        Le niveau d'alerte le plus élevé du canton est le niveau {{ canton.max_warnlevel }} ({{ canton.max_warnlevel_info_fr }}).
+        Dans le canton de {{ canton.canton_name_fr }}, {{ canton.n_regions_dry }} régions sur {{ canton.regions|length }} sont actuellement en situation de sécheresse{{#if canton.cdi_min_dry}} ({{ deficit_range(canton.cdi_min_dry, canton.cdi_max_dry, "cdi") }}){{/if}}. La situation {{ trend(canton.cdi_situation_delta, "situation") }}.
+
+        Au cours des 30 derniers jours, il est tombé en moyenne environ {{ canton.mean_precip_sum_1m }} mm de précipitations (cumul sur 3 mois : {{ canton.mean_precip_sum_3m }} mm). En comparaison pluriannuelle, cela représente régionalement {{ deficit_range(canton.precip_index_min, canton.precip_index_max, "niederschlag") }}.
+
+        {{#if canton.discharge.n_total}}{{ canton.discharge.pct_low }} % des stations de mesure du débit du canton présentent actuellement un débit faible (moyenne sur 7 jours). Parmi elles, {{ canton.discharge.n_very_low }} {{ plural(canton.discharge.n_very_low, "station se situe", "stations se situent") }} dans la plage très basse.{{/if}}{{#if not canton.discharge.n_total}}Le canton ne dispose d'aucune station de mesure du débit.{{/if}}
+
+        Concernant l'humidité du sol, {{ canton.n_regions_with_soil_moisture_deficit }} régions sur {{ canton.regions|length }} présentent un déficit.
     placeholders:
       - id: precip_index_summary
         source: canton.n_regions_by_precip_index
@@ -249,14 +302,22 @@ sections:
         {{#each canton.regions}}
         ### {{ this.region_name_de }}
 
-        In den vergangenen 30 Tagen sind in der Region {{ this.region_name_de }} rund {{ this.precip_sum_1m }} mm Niederschlag gefallen (3-Monats-Summe: {{ this.precip_sum_3m }} mm). Die Region weist damit aktuell {{ nomenclature.niederschlag.noun[this.precip_1m_index].de }} auf. Es besteht zurzeit {{ nomenclature.bodenfeuchte.noun[this.soil_moisture_index].de }}.
+        In den vergangenen 30 Tagen sind in der Region {{ this.region_name_de }} rund {{ this.precip_sum_1m }} mm Niederschlag gefallen (3-Monats-Summe: {{ this.precip_sum_3m }} mm). Die Region weist damit aktuell {{ nomenclature.niederschlag.noun[this.precip_1m_index].de }} auf. Das Defizit wird in nächster Zeit tendenziell {{ trend(this.precip_deficit_delta, "defizit") }}.
+
+        {{#if this.discharge.n_total}}{{ this.discharge.pct_low }} % der Abflussmessstationen weisen aktuell einen niedrigen Abfluss (7-Tages-Mittel) auf. Davon {{ plural(this.discharge.n_very_low, "liegt", "liegen") }} {{ this.discharge.n_very_low }} {{ plural(this.discharge.n_very_low, "Station", "Stationen") }} im sehr niedrigen Bereich.{{/if}}{{#if not this.discharge.n_total}}In dieser Region liegen keine Abflussmessstationen vor.{{/if}}
+
+        Es besteht zurzeit {{ nomenclature.bodenfeuchte.noun[this.soil_moisture_index].de }}. Das Defizit wird in nächster Zeit tendenziell {{ trend(this.soil_moisture_deficit_delta, "defizit") }}.
 
         {{/each}}
       fr: |
         {{#each canton.regions}}
         ### {{ this.region_name_de }}
 
-        Au cours des 30 derniers jours, environ {{ this.precip_sum_1m }} mm de précipitations sont tombés dans la région {{ this.region_name_de }} (cumul sur 3 mois : {{ this.precip_sum_3m }} mm). La région présente actuellement {{ nomenclature.niederschlag.noun[this.precip_1m_index].fr }}. Concernant l'humidité du sol, il y a actuellement {{ nomenclature.bodenfeuchte.noun[this.soil_moisture_index].fr }}.
+        Au cours des 30 derniers jours, environ {{ this.precip_sum_1m }} mm de précipitations sont tombés dans la région {{ this.region_name_de }} (cumul sur 3 mois : {{ this.precip_sum_3m }} mm). La région présente actuellement {{ nomenclature.niederschlag.noun[this.precip_1m_index].fr }}. Le déficit va probablement {{ trend(this.precip_deficit_delta, "defizit") }} prochainement.
+
+        {{#if this.discharge.n_total}}{{ this.discharge.pct_low }} % des stations de mesure du débit présentent actuellement un débit faible (moyenne sur 7 jours). Parmi elles, {{ this.discharge.n_very_low }} {{ plural(this.discharge.n_very_low, "station se situe", "stations se situent") }} dans la plage très basse.{{/if}}{{#if not this.discharge.n_total}}Cette région ne dispose d'aucune station de mesure du débit.{{/if}}
+
+        Concernant l'humidité du sol, il y a actuellement {{ nomenclature.bodenfeuchte.noun[this.soil_moisture_index].fr }}. Le déficit va probablement {{ trend(this.soil_moisture_deficit_delta, "defizit") }} prochainement.
 
         {{/each}}
     placeholders:

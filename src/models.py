@@ -25,6 +25,7 @@ class DataBundle:
     forecast_df: pd.DataFrame = field(default_factory=pd.DataFrame)
     current_stations_df: pd.DataFrame = field(default_factory=pd.DataFrame)
     reference_stations_df: pd.DataFrame = field(default_factory=pd.DataFrame)
+    station_region_map: dict[str, int] = field(default_factory=dict)
 
 
 @dataclass
@@ -35,6 +36,14 @@ class QualityReport:
     outlier_flags: list[str]
     is_stale: bool
     overall: Literal["ok", "warning", "error"]
+
+
+@dataclass
+class DischargeStats:
+    n_total: int      # discharge stations with a usable reference row
+    n_low: int        # current value < threshold1
+    n_very_low: int   # current value < q347 (subset of n_low)
+    pct_low: int      # round(n_low / n_total * 100); 0 when n_total == 0
 
 
 @dataclass
@@ -63,7 +72,11 @@ class RegionReport:
     warnlevel_info_de: str = ""
     warnlevel_info_fr: str = ""
     cdi_forecast_week2: int | None = None
-    hydro_stations: list[HydroStationReport] = field(default_factory=list)
+    precip_1m_index_forecast: int | None = None
+    soil_moisture_index_forecast: int | None = None
+    precip_deficit_delta: int = 0
+    soil_moisture_deficit_delta: int = 0
+    discharge: DischargeStats = field(default_factory=lambda: DischargeStats(0, 0, 0, 0))
 
 
 @dataclass
@@ -81,6 +94,17 @@ class CantonReport:
     n_regions_by_soil_moisture_index: dict[int, int]
     n_regions_by_hydro_index: dict[int, int]
     quality: QualityReport
+    n_regions_dry: int = 0
+    cdi_min_dry: int | None = None
+    cdi_max_dry: int | None = None
+    cdi_situation_delta: int = 0
+    mean_precip_sum_1m: float = 0.0
+    mean_precip_sum_3m: float = 0.0
+    precip_index_min: int = 1
+    precip_index_max: int = 1
+    n_regions_with_precip_deficit: int = 0
+    n_regions_with_soil_moisture_deficit: int = 0
+    discharge: DischargeStats = field(default_factory=lambda: DischargeStats(0, 0, 0, 0))
 
 
 @dataclass
@@ -111,3 +135,5 @@ class BriefingDocument:
     lead_maps: list = field(default_factory=list)   # list[MapSpec]
     lead_headline: str = ""
     lead_meta: str = ""
+    banner: list = field(default_factory=list)                 # list[dict]: {label, url}
+    weiterfuehrende_links: list = field(default_factory=list)  # list[dict]: {label, url}

@@ -85,6 +85,19 @@ def _parse_csv_from_zip_bytes(zip_bytes: bytes, filename: str) -> tuple[pd.DataF
     return df, comment_lines
 
 
+def _parse_stations_from_zip_bytes(zip_bytes: bytes, filename: str) -> pd.DataFrame:
+    """Parse a station CSV, forcing hydro_station_id to str (leading zeros matter)."""
+    with zipfile.ZipFile(io.BytesIO(zip_bytes)) as z:
+        with z.open(filename) as f:
+            raw = f.read().decode("utf-8", errors="replace")
+    data_lines = [ln for ln in raw.splitlines() if not ln.startswith("#") and ln.strip()]
+    df = pd.read_csv(io.StringIO("\n".join(data_lines)), sep=";", dtype={"hydro_station_id": str})
+    df["hydro_station_id"] = df["hydro_station_id"].str.strip()
+    if "measured_at" in df.columns:
+        df["measured_at"] = pd.to_datetime(df["measured_at"], format="%d.%m.%Y", errors="coerce")
+    return df
+
+
 def _parse_timestamp(comment_lines: list[str]) -> datetime:
     for line in comment_lines:
         m = re.search(r"(\d{2})\.(\d{2})\.(\d{4})", line)
@@ -128,6 +141,10 @@ def _fetch_from_stac() -> DataBundle:
     reference_df, _ = _parse_csv_from_zip_bytes(reference_zip_bytes, "regions.csv")
     reference_stations_df, _ = _parse_csv_from_zip_bytes(reference_zip_bytes, "daily_reference_stations.csv")
 
+    current_stations_df = _parse_stations_from_zip_bytes(current_zip_bytes, "weekly_current_stations.csv")
+    reference_stations_df = _parse_stations_from_zip_bytes(reference_zip_bytes, "daily_reference_stations.csv")
+    station_region_map = fixture_loader.load_station_region_map()
+
     data_timestamp = _parse_timestamp(comment_lines)
 
     forecast_df = forecast_raw.copy()
@@ -140,8 +157,9 @@ def _fetch_from_stac() -> DataBundle:
         historic_df=_parse_dates(historic_df),
         reference_df=reference_df,
         forecast_df=forecast_df,
-        current_stations_df=_parse_dates(current_stations_df),
+        current_stations_df=current_stations_df,
         reference_stations_df=reference_stations_df,
+        station_region_map=station_region_map,
         data_timestamp=data_timestamp,
         source="api",
     )

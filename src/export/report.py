@@ -142,6 +142,19 @@ def to_html(
 
     sections_html = "\n".join(sections_html_parts)
 
+    # Banner link row (top) and weiterführende Links (bottom)
+    banner_html = " · ".join(
+        f'<a href="{html.escape(b["url"])}">{html.escape(b["label"])}</a>'
+        for b in doc.banner
+    )
+    banner_block = f'<p class="banner">{banner_html}</p>' if banner_html else ""
+    links_items = "".join(
+        f'<li><a href="{html.escape(link["url"])}">{html.escape(link["label"])}</a></li>'
+        for link in doc.weiterfuehrende_links
+    )
+    links_block = f'<section class="links"><ul>{links_items}</ul></section>' if links_items else ""
+
+    # Quality summary block
     q = canton_report.quality
     quality_html = (
         f'<section class="quality" style="margin-top: 40px; padding-top: 20px; border-top: 1px solid #eee;">'
@@ -163,7 +176,9 @@ def to_html(
     </style>
 </head>
 <body>
-<header><h1>{html.escape(title)}</h1>{badge_html}</header>
-<main>{sections_html}\n{quality_html}</main>
+<header><h1>{html.escape(title)}</h1>{badge_html}{banner_block}</header>
+<main>{sections_html}
+{links_block}
+{quality_html}</main>
 </body>
 </html>"""

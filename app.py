@@ -89,14 +89,14 @@ with st.sidebar:
         index=canton_idx,
         key="canton_selector"
     )
-    
+
     st.divider()
-    
+
     # 3. View Tab Selector
     nav_options = ["canton", "regions"]
     curr_nav = st.session_state.get("view_tab_selector", "canton")
     nav_idx = nav_options.index(curr_nav) if curr_nav in nav_options else 0
-    
+
     view_tab = st.radio(
         "Navigation",
         options=nav_options,
@@ -146,6 +146,14 @@ if view_tab == "canton":
         unsafe_allow_html=True,
     )
 
+    if doc.banner:
+        banner_html = " · ".join(
+            f'<a href="{b["url"]}" target="_blank">{b["label"]}</a>' for b in doc.banner
+        )
+        st.markdown(banner_html, unsafe_allow_html=True)
+
+    st.divider()
+
     # ── Two columns: overview text left, map + legend right ───────────────
     left_col, right_col = st.columns([1, 1])
 
@@ -158,8 +166,6 @@ if view_tab == "canton":
 
     with right_col:
         if doc.lead_maps:
-            # Radio switcher renders only the active map, avoiding the Leaflet
-            # hidden-tab initialisation bug that breaks st.tabs() for iframes.
             map_labels = [
                 (ms.title_de if lang == "de" else ms.title_fr)
                 for ms in doc.lead_maps
@@ -175,7 +181,6 @@ if view_tab == "canton":
             m = build_canton_map(canton, doc.lead_maps[selected_map_idx])
             st.components.v1.html(m._repr_html_(), height=300)
 
-            # ── CDI legend directly below map ──────────────────────────────
             labels = DROUGHT_LEGEND[lang]
             items_html = "".join(
                 f"""<span style="display:inline-flex;align-items:center;margin-right:14px;white-space:nowrap;">
@@ -203,11 +208,17 @@ if view_tab == "canton":
         st.markdown(doc.sections[sec.id])
         st.write("")
 
+    # ── Weiterführende Links ────────────────────────────────────────────────
+    if doc.weiterfuehrende_links:
+        st.markdown("#### " + ("Weiterführende Links" if lang == "de" else "Liens complémentaires"))
+        for link in doc.weiterfuehrende_links:
+            st.markdown(f"- [{link['label']}]({link['url']})")
+
 # ── Tab 2: Regionale Lage ──────────────────────────────────────────────────
 elif view_tab == "regions":
     st.title(f"{t('tab_regions', lang)}: {canton_label}")
     st.divider()
-    
+
     # Extract narratives from the generated Markdown
     regional_narratives = {}
     if "regionen" in doc.sections:
@@ -220,7 +231,7 @@ elif view_tab == "regions":
     regionen_sec = next((s for s in rs.sections if s.id == "regionen"), None)
     col_allg_lage = regionen_sec.title.get(lang, "Allgemeine Lage") if regionen_sec else "Allgemeine Lage"
     col_expert = t("col_canton_recs", lang)
-    
+
     # Render Table Header using Streamlit Columns
     h_col1, h_col2, h_col3, h_col4, h_col5 = st.columns([1, 1.5, 2.5, 3.5, 2.5])
     h_col1.markdown(f"**{t('col_warnstufe', lang)}**")
@@ -228,18 +239,18 @@ elif view_tab == "regions":
     h_col3.markdown(f"**{t('col_situation', lang)}**")
     h_col4.markdown(f"**{col_allg_lage}**")
     h_col5.markdown(f"**{col_expert}**")
-    
+
     st.markdown("<hr style='margin-top: 0px; margin-bottom: 10px;'/>", unsafe_allow_html=True)
 
     # Render Rows
     for r in canton.regions:
         c1, c2, c3, c4, c5 = st.columns([1, 1.5, 2.5, 3.5, 2.5])
-        
+
         # 1. Warnstufe Badge
         bg, fg = _warnstufe_palette(r.warnlevel)
         badge = f"<div style='background:{bg}; color:{fg}; padding:6px; border-radius:6px; text-align:center; font-weight:bold; width:max-content; min-width:30px;'>{r.warnlevel}</div>"
-        
-        # 2. Region Name & Link
+
+        # 2. Region Name
         name = get_region_names(lang).get(r.region_id, r.region_name_de)
         
         slug = name.lower()
@@ -286,24 +297,25 @@ elif view_tab == "regions":
         with c5:
             # 5. Expert Input Widget
             expert_key = f"expert_{r.region_id}"
-            
+
             # Sync value from session_state if it exists
             current_val = st.session_state.expert_notes.get(expert_key, "")
-            
+
             # Update session state on change
             def update_note(key=expert_key):
                 st.session_state.expert_notes[key] = st.session_state[f"widget_{key}"]
 
             st.text_area(
-                t("expert_input_label", lang), 
-                value=current_val, 
-                key=f"widget_{expert_key}", 
+                t("expert_input_label", lang),
+                value=current_val,
+                key=f"widget_{expert_key}",
                 label_visibility="collapsed",
                 on_change=update_note,
                 placeholder=t("expert_input_placeholder", lang)
             )
-            
-        st.markdown("<hr style='margin-top: 10px; margin-bottom: 10px; opacity: 0.2;'/>", unsafe_allow_html=True)
+
+        st.markdown("<hr style='margin-top: 10px; margin-bottom: 10px; border-top: 1px solid #eee;'/>", unsafe_allow_html=True)
+
 
 # ── Global Footer (Applies to both tabs) ───────────────────────────────────
 st.divider()
@@ -320,7 +332,7 @@ with st.expander(t("quality_expander", lang)):
         st.warning(f"{t('quality_missing_cols', lang)}: {', '.join(q.missing_columns)}")
     if q.outlier_flags:
         st.warning(f"{t('quality_outliers', lang)}: {', '.join(q.outlier_flags)}")
-    
+
     for r in canton.regions:
         st.caption(
             f"R{r.region_id} ({r.region_name_de}): "
@@ -329,12 +341,12 @@ with st.expander(t("quality_expander", lang)):
 
 with export_placeholder:
     html_str = to_html(
-        doc=doc, 
-        canton_report=canton, 
-        ruleset=rs, 
+        doc=doc,
+        canton_report=canton,
+        ruleset=rs,
         expert_notes=st.session_state.expert_notes
     )
-    
+
     st.download_button(
         label=t("btn_html", lang),
         data=html_str.encode("utf-8"),

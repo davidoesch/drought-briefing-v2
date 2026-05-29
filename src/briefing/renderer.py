@@ -17,6 +17,8 @@ from src.models import BriefingDocument, CantonReport, MapSpec
 
 _EACH_OPEN = re.compile(r"\{\{#each\s+([^\s}]+)\s*\}\}")
 _EACH_CLOSE = re.compile(r"\{\{/each\}\}")
+_IF_OPEN = re.compile(r"\{\{#if\s+(.+?)\s*\}\}")
+_IF_CLOSE = re.compile(r"\{\{/if\}\}")
 _THIS_FIELD = re.compile(r"\{\{\s*this\.([^\s}]+)\s*\}\}")
 _THIS_BARE = re.compile(r"\{\{\s*this\s*\}\}")
 # Also replaces `this.field` inside other expressions (e.g. subscripts like [this.field])
@@ -26,6 +28,8 @@ _THIS_INPLACE = re.compile(r"\bthis\.")
 def _handlebars_to_jinja2(src: str) -> str:
     src = _EACH_OPEN.sub(r"{% for item in \1 %}", src)
     src = _EACH_CLOSE.sub("{% endfor %}", src)
+    src = _IF_OPEN.sub(r"{% if \1 %}", src)
+    src = _IF_CLOSE.sub("{% endif %}", src)
     src = _THIS_FIELD.sub(r"{{ item.\1 }}", src)
     src = _THIS_BARE.sub(r"{{ item }}", src)
     # Replace any remaining `this.` references inside Jinja2 expressions
@@ -93,6 +97,25 @@ def _pick_template(template, locale: str, section_id: str) -> str:
     raise ValueError(f"Section {section_id} has no usable template for locale={locale!r}")
 
 
+def _plural(n: int, singular: str, plural: str) -> str:
+    """Return `singular` when n == 1, else `plural`. Used for noun/verb agreement."""
+    return singular if n == 1 else plural
+
+
+def _make_deficit_range_resolver(indicators, locale: str):
+    def deficit_range(min_idx, max_idx, key):
+        spec = indicators[key]
+        if min_idx is None:
+            return ""
+        adj = spec.adjective or {}
+        if min_idx == max_idx:
+            template = spec.single[locale] if spec.single else "{val}"
+            return template.format(val=adj[min_idx][locale])
+        template = spec.range[locale] if spec.range else "{min} bis {max}"
+        return template.format(min=adj[min_idx][locale], max=adj[max_idx][locale])
+    return deficit_range
+
+
 def _make_trend_resolver(trend_spec, locale: str):
     def trend(delta, key):
         spec = trend_spec[key]
@@ -115,6 +138,10 @@ def render_briefing(
     env.filters["format_date"] = _format_date
     env.globals["format_date"] = _format_date
     env.globals["trend"] = _make_trend_resolver(ruleset.trend, locale)
+    env.globals["deficit_range"] = _make_deficit_range_resolver(
+        ruleset.nomenclature.indicators, locale
+    )
+    env.globals["plural"] = _plural
     env.globals["nomenclature"] = ruleset.nomenclature.indicators
     # Resolve fallback chains so the template never sees None.empfehlungen
     resolved_he = type(ruleset.handlungsempfehlungen).model_construct(
@@ -148,6 +175,19 @@ def render_briefing(
         for m in lead.maps
     ]
 
+    banner = [
+        {"label": b.label.get(locale, b.label.get("de", "")), "url": b.url}
+        for b in (ruleset.banner or [])
+    ]
+    links = []
+    for link in (ruleset.weiterfuehrende_links or []):
+        url = link.url
+        if isinstance(url, dict):
+            url = url.get(canton.canton_id)
+        if url is None:
+            continue  # link not available for this canton
+        links.append({"label": link.label.get(locale, link.label.get("de", "")), "url": url})
+
     return BriefingDocument(
         sections=sections,
         report=canton,
@@ -156,4 +196,6 @@ def render_briefing(
         lead_maps=lead_maps,
         lead_headline=headline,
         lead_meta=meta,
+        banner=banner,
+        weiterfuehrende_links=links,
     )
