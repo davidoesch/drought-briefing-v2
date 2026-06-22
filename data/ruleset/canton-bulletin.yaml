@@ -272,7 +272,7 @@ sections:
       de: |
         Im Kanton {{ canton.canton_name_de }} sind aktuell {{ canton.n_regions_dry }} von {{ canton.regions|length }} Regionen trocken{{#if canton.cdi_min_dry}} ({{ deficit_range(canton.cdi_min_dry, canton.cdi_max_dry, "cdi") }}){{/if}}. Die Situation {{ trend(canton.cdi_situation_delta, "situation") }}.
 
-        In den vergangenen 30 Tagen sind durchschnittlich rund {{ canton.mean_precip_sum_1m }} mm Niederschlag gefallen (3-Monats-Summe: {{ canton.mean_precip_sum_3m }} mm). Im langjährigen Vergleich bedeutet dies regional {{ deficit_range(canton.precip_index_min, canton.precip_index_max, "niederschlag") }}.
+        In den vergangenen 30 Tagen sind durchschnittlich rund {{ canton.mean_precip_sum_1m|round|int }} mm Niederschlag gefallen (3-Monats-Summe: {{ canton.mean_precip_sum_3m|round|int }} mm). Im langjährigen Vergleich bedeutet dies regional {{ deficit_range(canton.precip_index_min, canton.precip_index_max, "niederschlag") }}.
 
         {{#if canton.discharge.n_total}}{{ canton.discharge.pct_low }} % der Abflussmessstationen im Kanton weisen aktuell einen niedrigen Abfluss (7-Tages-Mittel) auf. Davon {{ plural(canton.discharge.n_very_low, "liegt", "liegen") }} {{ canton.discharge.n_very_low }} {{ plural(canton.discharge.n_very_low, "Station", "Stationen") }} im sehr niedrigen Bereich.{{/if}}{{#if not canton.discharge.n_total}}Im Kanton liegen keine Abflussmessstationen vor.{{/if}}
 
@@ -280,7 +280,7 @@ sections:
       fr: |
         Dans le canton de {{ canton.canton_name_fr }}, {{ canton.n_regions_dry }} régions sur {{ canton.regions|length }} sont actuellement en situation de sécheresse{{#if canton.cdi_min_dry}} ({{ deficit_range(canton.cdi_min_dry, canton.cdi_max_dry, "cdi") }}){{/if}}. La situation {{ trend(canton.cdi_situation_delta, "situation") }}.
 
-        Au cours des 30 derniers jours, il est tombé en moyenne environ {{ canton.mean_precip_sum_1m }} mm de précipitations (cumul sur 3 mois : {{ canton.mean_precip_sum_3m }} mm). En comparaison pluriannuelle, cela représente régionalement {{ deficit_range(canton.precip_index_min, canton.precip_index_max, "niederschlag") }}.
+        Au cours des 30 derniers jours, il est tombé en moyenne environ {{ canton.mean_precip_sum_1m|round|int }} mm de précipitations (cumul sur 3 mois : {{ canton.mean_precip_sum_3m|round|int }} mm). En comparaison pluriannuelle, cela représente régionalement {{ deficit_range(canton.precip_index_min, canton.precip_index_max, "niederschlag") }}.
 
         {{#if canton.discharge.n_total}}{{ canton.discharge.pct_low }} % des stations de mesure du débit du canton présentent actuellement un débit faible (moyenne sur 7 jours). Parmi elles, {{ canton.discharge.n_very_low }} {{ plural(canton.discharge.n_very_low, "station se situe", "stations se situent") }} dans la plage très basse.{{/if}}{{#if not canton.discharge.n_total}}Le canton ne dispose d'aucune station de mesure du débit.{{/if}}
 
