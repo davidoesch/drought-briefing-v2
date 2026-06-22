@@ -180,9 +180,7 @@ CANTON_TO_REGIONS: Final[dict[int, frozenset[int]]] = {
     },
 }
 
-DATA_STALENESS_DAYS: Final[int] = 14
-INDICATOR_COLUMNS: Final[list[str]] = [
-    "cdi", "spi_3m", "soil_moisture_ufc", "vhi",
-    "spi_1m", "spi_6m", "spi_12m", "spi_24m",
-    "precip_sum_1m", "precip_sum_3m",
-]
+from config.rules_loader import RULES
+
+DATA_STALENESS_DAYS: Final[int] = RULES.staleness_days
+INDICATOR_COLUMNS: Final[list[str]] = RULES.indicator_columns

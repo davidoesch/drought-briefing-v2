@@ -1,0 +1,265 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "RegionReport",
+  "description": "Per-warning-region drought assessment output written to data/processed/warning_regions/{region_id}.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "region_id",
+    "region_name_de",
+    "data_timestamp",
+    "source",
+    "cdi",
+    "spi_3m",
+    "soil_moisture_pct",
+    "vhi",
+    "cdi_trend",
+    "spi_3m_delta",
+    "vhi_delta",
+    "pct_critical",
+    "spi_3m_percentile",
+    "quality",
+    "precip_sum_1m",
+    "precip_sum_3m",
+    "precip_1m_index",
+    "soil_moisture_index",
+    "hydro_index",
+    "warnlevel",
+    "warnlevel_info_de",
+    "warnlevel_info_fr",
+    "cdi_forecast_week2",
+    "precip_1m_index_forecast",
+    "soil_moisture_index_forecast",
+    "precip_deficit_delta",
+    "soil_moisture_deficit_delta",
+    "discharge",
+    "hydro_stations"
+  ],
+  "properties": {
+    "region_id": {
+      "description": "BAFU drought warning region number (31–68)",
+      "type": "integer",
+      "minimum": 31,
+      "maximum": 68
+    },
+    "region_name_de": {
+      "description": "German name of the warning region",
+      "type": "string"
+    },
+    "data_timestamp": {
+      "description": "ISO-8601 datetime of the source dataset",
+      "type": "string"
+    },
+    "source": {
+      "description": "Origin of the data bundle",
+      "type": "string",
+      "enum": ["api", "fixture"]
+    },
+    "cdi": {
+      "description": "Combined Drought Indicator (0 = no drought … 5 = exceptional)",
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 5
+    },
+    "spi_3m": {
+      "description": "3-month Standardised Precipitation Index; null when unavailable",
+      "type": ["number", "null"]
+    },
+    "soil_moisture_pct": {
+      "description": "Soil moisture as percentage of usable field capacity; null when unavailable",
+      "type": ["number", "null"]
+    },
+    "vhi": {
+      "description": "Vegetation Health Index; null when unavailable",
+      "type": ["number", "null"]
+    },
+    "cdi_trend": {
+      "description": "Week-on-week CDI change: +1 worsening, 0 stable, -1 improving",
+      "type": "integer",
+      "enum": [-1, 0, 1]
+    },
+    "spi_3m_delta": {
+      "description": "SPI-3m change versus previous week",
+      "type": "number"
+    },
+    "vhi_delta": {
+      "description": "VHI change versus previous week",
+      "type": "number"
+    },
+    "pct_critical": {
+      "description": "Fraction of the last 52 weeks with CDI ≥ cdi.critical_min (0.0–1.0)",
+      "type": "number",
+      "minimum": 0.0,
+      "maximum": 1.0
+    },
+    "spi_3m_percentile": {
+      "description": "Percentile of current SPI-3m within historic distribution (0–100)",
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 100
+    },
+    "quality": {
+      "description": "Data quality assessment",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "data_age_days",
+        "coverage_pct",
+        "missing_columns",
+        "outlier_flags",
+        "is_stale",
+        "overall"
+      ],
+      "properties": {
+        "data_age_days": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "coverage_pct": {
+          "type": "number",
+          "minimum": 0.0,
+          "maximum": 1.0
+        },
+        "missing_columns": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "outlier_flags": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "is_stale": { "type": "boolean" },
+        "overall": {
+          "type": "string",
+          "enum": ["ok", "warning", "error"]
+        }
+      }
+    },
+    "precip_sum_1m": {
+      "description": "1-month precipitation sum (mm); null when unavailable",
+      "type": ["number", "null"]
+    },
+    "precip_sum_3m": {
+      "description": "3-month precipitation sum (mm); null when unavailable",
+      "type": ["number", "null"]
+    },
+    "precip_1m_index": {
+      "description": "1-month precipitation deficit index (1–5, 1 = normal, 5 = extreme deficit)",
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 5
+    },
+    "soil_moisture_index": {
+      "description": "Soil moisture deficit index (1–5)",
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 5
+    },
+    "hydro_index": {
+      "description": "Hydrological deficit index (1–5)",
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 5
+    },
+    "warnlevel": {
+      "description": "Official BAFU warning level (1–5); falls back to max(cdi, 1) when not available",
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 5
+    },
+    "warnlevel_info_de": {
+      "description": "German descriptive text for the warning level",
+      "type": "string"
+    },
+    "warnlevel_info_fr": {
+      "description": "French descriptive text for the warning level",
+      "type": "string"
+    },
+    "cdi_forecast_week2": {
+      "description": "CDI forecast for approximately 14 days ahead; null if forecast data unavailable",
+      "type": ["integer", "null"],
+      "minimum": 0,
+      "maximum": 5
+    },
+    "precip_1m_index_forecast": {
+      "description": "Precipitation index forecast for approximately 14 days ahead; null if unavailable",
+      "type": ["integer", "null"],
+      "minimum": 1,
+      "maximum": 5
+    },
+    "soil_moisture_index_forecast": {
+      "description": "Soil moisture index forecast for approximately 14 days ahead; null if unavailable",
+      "type": ["integer", "null"],
+      "minimum": 1,
+      "maximum": 5
+    },
+    "precip_deficit_delta": {
+      "description": "Precipitation index change from current to week-2 forecast",
+      "type": "integer"
+    },
+    "soil_moisture_deficit_delta": {
+      "description": "Soil moisture index change from current to week-2 forecast",
+      "type": "integer"
+    },
+    "discharge": {
+      "description": "Discharge station summary for the region",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["n_total", "n_low", "n_very_low", "pct_low"],
+      "properties": {
+        "n_total": {
+          "description": "Total discharge stations with usable reference data",
+          "type": "integer",
+          "minimum": 0
+        },
+        "n_low": {
+          "description": "Stations with current flow below threshold1 (low flow)",
+          "type": "integer",
+          "minimum": 0
+        },
+        "n_very_low": {
+          "description": "Stations with current flow below q347 (very low flow; subset of n_low)",
+          "type": "integer",
+          "minimum": 0
+        },
+        "pct_low": {
+          "description": "Percentage of stations with low flow (0–100); 0 when n_total = 0",
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 100
+        }
+      }
+    },
+    "hydro_stations": {
+      "description": "Individual discharge station readings for this region",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "station_id",
+          "station_name",
+          "current_value",
+          "threshold1",
+          "min_value"
+        ],
+        "properties": {
+          "station_id": { "type": "string" },
+          "station_name": { "type": "string" },
+          "current_value": {
+            "description": "Current discharge (m³/s); null when unavailable",
+            "type": ["number", "null"]
+          },
+          "threshold1": {
+            "description": "Low-flow threshold1 for this day-of-year (m³/s); null when unavailable",
+            "type": ["number", "null"]
+          },
+          "min_value": {
+            "description": "Historical minimum discharge for this day-of-year (m³/s); null when unavailable",
+            "type": ["number", "null"]
+          }
+        }
+      }
+    }
+  }
+}

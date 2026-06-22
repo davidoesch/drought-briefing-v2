@@ -3,6 +3,7 @@ from __future__ import annotations
 
 from collections import Counter
 
+from config.rules_loader import RULES
 from config.settings import CANTON_NAMES, CANTON_TO_REGIONS
 from src.aggregation.regional import compute_region_report
 from src.aggregation.stations import compute_discharge_stats
@@ -47,7 +48,7 @@ def compute_canton_report(
     quality = _fold_quality([r.quality for r in region_reports])
 
     # --- New aggregates (template revision 2026-05-29) ---
-    dry = [r for r in region_reports if r.cdi > 1]
+    dry = [r for r in region_reports if r.cdi >= RULES.cdi_dry_min]
     n_regions_dry = len(dry)
     cdi_min_dry = min((r.cdi for r in dry), default=None)
     cdi_max_dry = max((r.cdi for r in dry), default=None)
@@ -66,8 +67,8 @@ def compute_canton_report(
     precip_index_min = min(precip_indices)
     precip_index_max = max(precip_indices)
 
-    n_precip_deficit = sum(1 for r in region_reports if r.precip_1m_index >= 2)
-    n_soil_deficit = sum(1 for r in region_reports if r.soil_moisture_index >= 2)
+    n_precip_deficit = sum(1 for r in region_reports if r.precip_1m_index >= RULES.precip_1m_index_min)
+    n_soil_deficit = sum(1 for r in region_reports if r.soil_moisture_index >= RULES.soil_moisture_index_min)
 
     discharge = compute_discharge_stats(region_ids, bundle)
 

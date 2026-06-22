@@ -5,6 +5,7 @@ from typing import Literal
 
 import pandas as pd
 
+from config.rules_loader import RULES
 from config.settings import DATA_STALENESS_DAYS, INDICATOR_COLUMNS
 from src.models import QualityReport
 
@@ -29,10 +30,10 @@ def run_quality_checks(
             q1 = spi_3m_reference.quantile(0.25)
             q3 = spi_3m_reference.quantile(0.75)
             iqr = q3 - q1
-            if val < (q1 - 3 * iqr) or val > (q3 + 3 * iqr):
+            if val < (q1 - RULES.outlier_iqr_factor * iqr) or val > (q3 + RULES.outlier_iqr_factor * iqr):
                 outlier_flags.append("spi_3m")
 
-    if is_stale or coverage_pct < 0.5:
+    if is_stale or coverage_pct < RULES.coverage_error_threshold:
         overall: Literal["ok", "warning", "error"] = "error"
     elif missing_columns or outlier_flags:
         overall = "warning"

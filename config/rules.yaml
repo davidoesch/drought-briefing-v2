@@ -1,0 +1,100 @@
+# config/rules.yaml
+#
+# Drought classification rules and quality thresholds.
+#
+# All values map 1:1 to the existing methodology — do not change without
+# understanding the downstream effects on drought assessment outputs.
+#
+# Domain experts may adjust these values via pull request.
+# No Python knowledge required.
+
+# ---------------------------------------------------------------------------
+# Data quality
+# ---------------------------------------------------------------------------
+
+data_quality:
+
+  # Data is considered stale if older than this many days
+  staleness_days: 14
+
+  # Fraction of expected indicator columns that must be present.
+  # Below this threshold the overall quality is "error".
+  coverage_error_threshold: 0.5
+
+  # Tukey IQR multiplier for SPI-3m outlier detection.
+  # A value is flagged if it falls outside [Q1 − factor×IQR, Q3 + factor×IQR].
+  outlier_iqr_factor: 3.0
+
+  # Indicator columns expected in the weekly current dataset.
+  # Missing or null values reduce coverage_pct.
+  indicator_columns:
+    - cdi
+    - spi_3m
+    - soil_moisture_ufc
+    - vhi
+    - spi_1m
+    - spi_6m
+    - spi_12m
+    - spi_24m
+    - precip_sum_1m
+    - precip_sum_3m
+
+# ---------------------------------------------------------------------------
+# CDI classification
+# ---------------------------------------------------------------------------
+
+cdi:
+
+  # CDI levels at or above this value are counted as "critical" weeks
+  # when computing the pct_critical metric (fraction over the historic window).
+  critical_min: 3
+
+  # Regions with CDI at or above this value are counted as "dry"
+  # in canton-level summaries (n_regions_dry).
+  dry_min: 2
+
+# ---------------------------------------------------------------------------
+# Indicator deficit thresholds
+# ---------------------------------------------------------------------------
+
+indicator_deficits:
+
+  # Precipitation 1-month index at or above this → region counted as having
+  # a precipitation deficit (n_regions_with_precip_deficit).
+  precip_1m_index_min: 2
+
+  # Soil moisture index at or above this → region counted as having
+  # a soil moisture deficit (n_regions_with_soil_moisture_deficit).
+  soil_moisture_index_min: 2
+
+# ---------------------------------------------------------------------------
+# Historic data window
+# ---------------------------------------------------------------------------
+
+historic:
+
+  # Number of weeks of historic data used for the pct_critical calculation.
+  window_weeks: 52
+
+# ---------------------------------------------------------------------------
+# Forecast horizon
+# ---------------------------------------------------------------------------
+
+forecast:
+
+  # Days ahead for the week-2 forecast lookup.
+  horizon_days: 14
+
+  # Maximum allowed deviation (in days) when matching a forecast valid_at
+  # timestamp to the target date (data_timestamp + horizon_days).
+  max_delta_days: 5
+
+# ---------------------------------------------------------------------------
+# Warning level assignment
+# ---------------------------------------------------------------------------
+
+warnlevel:
+
+  # Minimum warning level used when no official Warnkarte entry is available
+  # for a region. The effective level is max(cdi, fallback_min).
+  fallback_min: 1

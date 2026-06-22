@@ -1,0 +1,77 @@
+name: Daily Drought Briefing Update
+
+# Runs daily at 05:30 UTC (07:30 Swiss summer / 06:30 Swiss winter).
+# Data sources publish overnight; 05:30 UTC ensures fresh data is available.
+# Manual dispatch is also available for out-of-cycle updates.
+
+on:
+  schedule:
+    - cron: '30 5 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Only one deployment runs at a time. A second trigger queues rather than
+# cancelling an in-progress run to avoid leaving the site half-updated.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: pip install -e .
+
+      # -----------------------------------------------------------------------
+      # Pipeline: download → aggregate → validate → generate site
+      # -----------------------------------------------------------------------
+
+      - name: Download raw datasets
+        run: python scripts/download.py
+
+      - name: Aggregate and evaluate
+        # aggregate.py applies drought rules (config/rules.yaml) and writes
+        # data/processed/warning_regions/ and data/processed/cantons/
+        run: python scripts/aggregate.py
+
+      - name: Validate processed outputs
+        # validate.py checks all generated JSON against config/schemas/
+        run: python scripts/validate.py
+
+      - name: Generate static site
+        # generate_site.py reads data/processed/cantons/ and writes site/
+        run: python scripts/generate_site.py
+
+      # -----------------------------------------------------------------------
+      # Publish to GitHub Pages
+      # -----------------------------------------------------------------------
+
+      - name: Configure Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: site/
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

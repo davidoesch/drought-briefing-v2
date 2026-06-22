@@ -75,6 +75,9 @@ UI_STRINGS: dict[str, dict[str, str]] = {
         "col_canton_recs": "Empfehlungen des Kantons",
         "expert_input_label": "Kantonale Empfehlungen",
         "expert_input_placeholder": "Empfehlungen hier eingeben...",
+        "stations_low": "Stationen tief",
+        "stations_very_low": "sehr tief",
+        "no_stations": "Keine Stationen / Daten",
     },
     "fr": {
         "lang_toggle_label": "Sprache / Langue",
@@ -141,6 +144,9 @@ UI_STRINGS: dict[str, dict[str, str]] = {
         "col_canton_recs": "Recommandations du canton",
         "expert_input_label": "Recommandations cantonales",
         "expert_input_placeholder": "Saisissez les recommandations ici...",
+        "stations_low": "stations basses",
+        "stations_very_low": "très basses",
+        "no_stations": "Pas de stations / données",
     },
 }
 

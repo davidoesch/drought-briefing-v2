@@ -1,0 +1,190 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "CantonReport",
+  "description": "Per-canton drought assessment output written to data/processed/cantons/{canton_id}.json. Embedded region objects in 'regions' must each conform to the RegionReport schema.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "canton_id",
+    "canton_name_de",
+    "canton_name_fr",
+    "data_timestamp",
+    "source",
+    "regions",
+    "max_warnlevel",
+    "max_warnlevel_info_de",
+    "max_warnlevel_info_fr",
+    "n_regions_by_precip_index",
+    "n_regions_by_soil_moisture_index",
+    "n_regions_by_hydro_index",
+    "quality",
+    "n_regions_dry",
+    "cdi_min_dry",
+    "cdi_max_dry",
+    "cdi_situation_delta",
+    "mean_precip_sum_1m",
+    "mean_precip_sum_3m",
+    "precip_index_min",
+    "precip_index_max",
+    "n_regions_with_precip_deficit",
+    "n_regions_with_soil_moisture_deficit",
+    "discharge"
+  ],
+  "properties": {
+    "canton_id": {
+      "description": "Swiss canton BFS number (1–26)",
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 26
+    },
+    "canton_name_de": {
+      "description": "German name of the canton",
+      "type": "string"
+    },
+    "canton_name_fr": {
+      "description": "French name of the canton",
+      "type": "string"
+    },
+    "data_timestamp": {
+      "description": "ISO-8601 datetime of the source dataset",
+      "type": "string"
+    },
+    "source": {
+      "description": "Origin of the data bundle",
+      "type": "string",
+      "enum": ["api", "fixture"]
+    },
+    "regions": {
+      "description": "Per-region reports for all warning regions within this canton. Each item must conform to the RegionReport schema.",
+      "type": "array",
+      "minItems": 1,
+      "items": { "type": "object" }
+    },
+    "max_warnlevel": {
+      "description": "Maximum warning level across all regions in the canton (1–5)",
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 5
+    },
+    "max_warnlevel_info_de": {
+      "description": "German warning level text for the region with the highest warning level",
+      "type": "string"
+    },
+    "max_warnlevel_info_fr": {
+      "description": "French warning level text for the region with the highest warning level",
+      "type": "string"
+    },
+    "n_regions_by_precip_index": {
+      "description": "Count of regions per precipitation index level. Keys are index levels (as strings); values are counts.",
+      "type": "object",
+      "additionalProperties": { "type": "integer", "minimum": 0 }
+    },
+    "n_regions_by_soil_moisture_index": {
+      "description": "Count of regions per soil moisture index level. Keys are index levels (as strings); values are counts.",
+      "type": "object",
+      "additionalProperties": { "type": "integer", "minimum": 0 }
+    },
+    "n_regions_by_hydro_index": {
+      "description": "Count of regions per hydrological index level. Keys are index levels (as strings); values are counts.",
+      "type": "object",
+      "additionalProperties": { "type": "integer", "minimum": 0 }
+    },
+    "quality": {
+      "description": "Aggregated data quality assessment across all regions",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "data_age_days",
+        "coverage_pct",
+        "missing_columns",
+        "outlier_flags",
+        "is_stale",
+        "overall"
+      ],
+      "properties": {
+        "data_age_days": { "type": "integer", "minimum": 0 },
+        "coverage_pct": {
+          "type": "number",
+          "minimum": 0.0,
+          "maximum": 1.0
+        },
+        "missing_columns": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "outlier_flags": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "is_stale": { "type": "boolean" },
+        "overall": {
+          "type": "string",
+          "enum": ["ok", "warning", "error"]
+        }
+      }
+    },
+    "n_regions_dry": {
+      "description": "Number of regions with CDI ≥ cdi.dry_min",
+      "type": "integer",
+      "minimum": 0
+    },
+    "cdi_min_dry": {
+      "description": "Minimum CDI across dry regions; null if no dry regions",
+      "type": ["integer", "null"],
+      "minimum": 0,
+      "maximum": 5
+    },
+    "cdi_max_dry": {
+      "description": "Maximum CDI across dry regions; null if no dry regions",
+      "type": ["integer", "null"],
+      "minimum": 0,
+      "maximum": 5
+    },
+    "cdi_situation_delta": {
+      "description": "Difference between sum of week-2 CDI forecasts and sum of current CDI values across regions",
+      "type": "integer"
+    },
+    "mean_precip_sum_1m": {
+      "description": "Mean 1-month precipitation sum across regions (mm); null if all region values are unavailable",
+      "type": ["number", "null"]
+    },
+    "mean_precip_sum_3m": {
+      "description": "Mean 3-month precipitation sum across regions (mm); null if all region values are unavailable",
+      "type": ["number", "null"]
+    },
+    "precip_index_min": {
+      "description": "Minimum precipitation index across all regions (1–5)",
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 5
+    },
+    "precip_index_max": {
+      "description": "Maximum precipitation index across all regions (1–5)",
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 5
+    },
+    "n_regions_with_precip_deficit": {
+      "description": "Number of regions with precipitation index ≥ indicator_deficits.precip_1m_index_min",
+      "type": "integer",
+      "minimum": 0
+    },
+    "n_regions_with_soil_moisture_deficit": {
+      "description": "Number of regions with soil moisture index ≥ indicator_deficits.soil_moisture_index_min",
+      "type": "integer",
+      "minimum": 0
+    },
+    "discharge": {
+      "description": "Aggregated discharge station summary across all regions in the canton",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["n_total", "n_low", "n_very_low", "pct_low"],
+      "properties": {
+        "n_total": { "type": "integer", "minimum": 0 },
+        "n_low": { "type": "integer", "minimum": 0 },
+        "n_very_low": { "type": "integer", "minimum": 0 },
+        "pct_low": { "type": "integer", "minimum": 0, "maximum": 100 }
+      }
+    }
+  }
+}

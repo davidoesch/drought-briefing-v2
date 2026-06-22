@@ -6,6 +6,7 @@ from datetime import datetime, timedelta
 
 import pandas as pd
 
+from config.rules_loader import RULES
 from config.settings import REGION_NAMES_DE
 from src.aggregation.indicators import compute_pct_critical, compute_percentile, compute_trend
 from src.aggregation.stations import compute_discharge_stats
@@ -105,7 +106,7 @@ def compute_region_report(
         warnlevel_info_de = warnkarte_entry.info_de
         warnlevel_info_fr = warnkarte_entry.info_fr
     else:
-        warnlevel = max(cdi, 1)
+        warnlevel = max(cdi, RULES.fallback_min)
         warnlevel_info_de = ""
         warnlevel_info_fr = ""
 
@@ -147,14 +148,14 @@ def _forecast_week2_value(bundle: DataBundle, region_id: int, column: str) -> in
     forecast = bundle.forecast_df
     if forecast.empty or column not in forecast.columns:
         return None
-    target_date = bundle.data_timestamp + timedelta(days=14)
+    target_date = bundle.data_timestamp + timedelta(days=RULES.horizon_days)
     region_forecast = forecast[forecast["drought_region_id"] == region_id]
     if region_forecast.empty:
         return None
     region_forecast = region_forecast.copy()
     region_forecast["delta"] = (region_forecast["valid_at"] - target_date).abs()
     closest = region_forecast.sort_values("delta").iloc[0]
-    if closest["delta"] > pd.Timedelta(days=5):
+    if closest["delta"] > pd.Timedelta(days=RULES.max_delta_days):
         return None
     if pd.isna(closest.get(column)):
         return None
