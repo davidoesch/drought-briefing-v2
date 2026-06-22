@@ -1,4 +1,4 @@
-# One Click Drought Briefing
+# One Click Drought Briefing V2
 
 **Automated drought situation reports for Swiss authorities — from open federal data to a ready-to-share bulletin in seconds.**
 
