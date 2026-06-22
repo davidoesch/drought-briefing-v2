@@ -26,7 +26,7 @@
     "NAME": "Bern",
     "KANTONSNUM": 2,
     "MAPGEO": "&center=2614322,1185492&z=8",
-    "warnregionen":
+    "warnregionen": [
       {
         "REGION_NR": 33,
         "Name": "Unteres Emmental"
