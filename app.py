@@ -274,8 +274,8 @@ elif view_tab == "regions":
                 hydro_lines.append(
                     f"<b>{header_text}</b><br/>"
                     f"<span style='opacity: 0.8; font-size:13px; line-height: 1.3;'>"
-                    f"{abfluss_label}: {val_str} [m&sup3;/s]<br/>"
-                    f"T1: {t1_str} [m&sup3;/s] | Min: {min_str} [m&sup3;/s]"
+                    f"{abfluss_label}: {val_str} m<sup>3</sup>/s<br/>"
+                    f"T1: {t1_str} m<sup>3</sup>/s | Min: {min_str} m<sup>3</sup>/s"
                     f"</span>"
                 )
             situation = "<br/><br/>".join(hydro_lines)
