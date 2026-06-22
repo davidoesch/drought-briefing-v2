@@ -19,6 +19,7 @@ from __future__ import annotations
 import html as _html
 import json
 import logging
+import math
 import re
 import shutil
 import sys
@@ -29,6 +30,7 @@ _REPO_ROOT = Path(__file__).resolve().parents[1]
 if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
 
+from config.settings import CDI_COLOURS, CDI_LABELS, CDI_LABELS_FR
 from src.briefing.renderer import load_ruleset, render_briefing
 from src.i18n.strings import get_region_names, t
 from src.models import (
@@ -148,13 +150,52 @@ main{padding:2rem 0 3rem}
   .lead-card{flex-direction:column}
   .canton-grid{grid-template-columns:1fr}
   .page-title{font-size:1.5rem}
+  .region-table{font-size:.78rem}
+}
+
+/* Action buttons (export / permalink) */
+.header-actions{display:flex;align-items:center;gap:.5rem;flex-wrap:wrap}
+.action-btn{border:1px solid var(--border);background:var(--white);color:var(--blue);padding:.3rem .65rem;font-size:.82rem;cursor:pointer;border-radius:4px;font-family:inherit;font-weight:700;transition:background .1s,color .1s}
+.action-btn:hover{background:var(--blue);color:var(--white)}
+
+/* Canton recommendation textarea */
+.canton-rec{width:100%;min-height:72px;resize:vertical;border:1px solid var(--border);border-radius:4px;padding:.35rem .45rem;font-family:inherit;font-size:.82rem;color:var(--text);background:var(--white)}
+.canton-rec:focus{outline:2px solid var(--blue);outline-offset:1px;border-color:var(--blue)}
+
+/* Map card */
+.map-card{background:var(--white);border:1px solid var(--border);border-radius:6px;padding:1.25rem 1.5rem;margin-bottom:1.25rem;box-shadow:var(--shadow)}
+.map-card h2{font-size:1rem;font-weight:700;color:var(--blue);padding-bottom:.6rem;margin-bottom:.9rem;border-bottom:2px solid var(--bg)}
+.map-controls{display:flex;align-items:center;gap:1.5rem;margin-bottom:.75rem;flex-wrap:wrap}
+.map-radio-group{display:flex;gap:1rem}
+.map-radio-group label{display:flex;align-items:center;gap:.35rem;font-size:.88rem;cursor:pointer}
+.map-radio-group input[type=radio]{accent-color:var(--blue)}
+.map-frame{width:100%;height:420px;border:1px solid var(--border);border-radius:4px}
+.map-unavailable{padding:2rem;text-align:center;color:var(--muted);background:var(--bg);border-radius:4px;font-size:.88rem;border:1px dashed var(--border)}
+
+/* CDI legend */
+.cdi-legend{display:flex;flex-wrap:wrap;gap:.4rem .75rem;margin-top:.75rem}
+.cdi-legend-item{display:flex;align-items:center;gap:.4rem;font-size:.8rem}
+.cdi-swatch{width:1rem;height:1rem;border-radius:2px;border:1px solid rgba(0,0,0,.1);flex-shrink:0}
+
+/* Print */
+@media print{
+  .site-header{position:static}
+  .header-actions{display:none!important}
+  .lang-toggle{display:none!important}
+  .map-frame{height:260px}
+  .canton-rec{border:none!important;resize:none;background:transparent;min-height:unset}
+  .card,.map-card{box-shadow:none;break-inside:avoid}
+  .site-footer{display:none}
+  .quality-bar{break-before:page}
 }
 """
 
 _JS = """\
-/* Drought Briefing — language switcher */
+/* Drought Briefing — language switcher, permalink, export, map toggle, canton recs */
 (function () {
   'use strict';
+
+  /* ---- language switcher ---- */
   function switchLang(lang) {
     if (lang !== 'de' && lang !== 'fr') return;
     document.documentElement.lang = lang;
@@ -163,13 +204,63 @@ _JS = """\
     });
     try { localStorage.setItem('droughtLang', lang); } catch (_) {}
   }
+
+  /* ---- permalink: copy URL + ?lang=XX to clipboard ---- */
+  window.copyPermalink = function () {
+    var base = window.location.href.split('?')[0];
+    var lang = document.documentElement.lang || 'de';
+    var link = base + '?lang=' + lang;
+    function fallback() {
+      var ta = document.createElement('textarea');
+      ta.value = link; ta.style.cssText = 'position:fixed;opacity:0';
+      document.body.appendChild(ta); ta.select();
+      try { document.execCommand('copy'); } catch (_) {}
+      document.body.removeChild(ta);
+    }
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(link).catch(fallback);
+    } else { fallback(); }
+  };
+
+  /* ---- map radio toggle: switch between CDI1 / CDI2 iframes ---- */
+  function initMapToggle() {
+    document.querySelectorAll('.map-radio-btn').forEach(function (radio) {
+      radio.addEventListener('change', function () {
+        var container = this.closest('.map-card');
+        if (!container) return;
+        container.querySelectorAll('.map-frame').forEach(function (f) {
+          f.style.display = 'none';
+        });
+        var target = document.getElementById(this.value);
+        if (target) target.style.display = 'block';
+      });
+    });
+  }
+
+  /* ---- canton recommendation textareas (localStorage per region) ---- */
+  function initCantonRecs() {
+    document.querySelectorAll('.canton-rec').forEach(function (ta) {
+      var key = 'cantonRec_' + ta.dataset.regionId;
+      try { ta.value = localStorage.getItem(key) || ''; } catch (_) {}
+      ta.addEventListener('input', function () {
+        try { localStorage.setItem(key, ta.value); } catch (_) {}
+      });
+    });
+  }
+
   document.addEventListener('DOMContentLoaded', function () {
+    /* language: URL param > localStorage > default de */
+    var params = new URLSearchParams(window.location.search);
     var saved = null;
     try { saved = localStorage.getItem('droughtLang'); } catch (_) {}
-    switchLang(saved || 'de');
+    switchLang(params.get('lang') || saved || 'de');
+
     document.querySelectorAll('.lang-btn').forEach(function (btn) {
       btn.addEventListener('click', function () { switchLang(btn.dataset.lang); });
     });
+
+    initMapToggle();
+    initCantonRecs();
   });
 }());
 """
@@ -325,10 +416,143 @@ def _parse_regionen(section_text: str) -> dict[str, str]:
     return result
 
 
+def _station_details_html(r: RegionReport, locale: str) -> str:
+    """Per-station discharge details for the Situation column."""
+    stations = [s for s in r.hydro_stations if not math.isnan(s.current_value)]
+    if not stations:
+        ds = r.discharge
+        if ds.n_total > 0:
+            return (
+                f'<span style="font-size:.85rem;">'
+                f"{ds.n_low}/{ds.n_total} {_html.escape(t('stations_low', locale))}"
+                f'<br/><span style="color:var(--muted);">'
+                f"{ds.n_very_low} {_html.escape(t('stations_very_low', locale))}"
+                f"</span></span>"
+            )
+        return (
+            f'<span style="color:var(--muted);font-size:.85rem;">'
+            f"{_html.escape(t('no_stations', locale))}</span>"
+        )
+
+    lbl_q = _html.escape(t("metric_abfluss", locale))
+    lbl_t1 = _html.escape(t("metric_threshold_t1", locale))
+    lbl_mn = _html.escape(t("metric_threshold_min", locale))
+    parts: list[str] = []
+    for s in stations:
+        name = _html.escape(s.station_name if s.station_name else f"Station {s.station_id}")
+        t1_str = f"{s.threshold1:.1f}" if not math.isnan(s.threshold1) else "–"
+        mn_str = f"{s.min_value:.1f}" if not math.isnan(s.min_value) else "–"
+        parts.append(
+            f'<div style="font-size:.82rem;margin-bottom:.55rem;">'
+            f"<b>{name}</b><br/>"
+            f"{lbl_q}: {s.current_value:.1f} m³/s<br/>"
+            f"{lbl_t1}: {t1_str} m³/s<br/>"
+            f"{lbl_mn}: {mn_str} m³/s"
+            f"</div>"
+        )
+    return "".join(parts)
+
+
+def _cdi_legend_html(locale: str) -> str:
+    """Horizontal CDI colour legend strip."""
+    labels = CDI_LABELS_FR if locale == "fr" else CDI_LABELS
+    title = _html.escape(t("map_legend_title", locale))
+    items: list[str] = []
+    for cdi_val, colour in sorted(CDI_COLOURS.items()):
+        label = _html.escape(labels.get(cdi_val, str(cdi_val)))
+        items.append(
+            f'<span class="cdi-legend-item">'
+            f'<span class="cdi-swatch" style="background:{colour};"></span>'
+            f"{label}"
+            f"</span>"
+        )
+    return (
+        f'<div style="margin-top:.75rem;">'
+        f'<b style="font-size:.82rem;">{title}</b>'
+        f'<div class="cdi-legend">{"".join(items)}</div>'
+        f"</div>"
+    )
+
+
+def _generate_map_files(canton: CantonReport, out_dir: Path) -> bool:
+    """
+    Pre-generate Folium map HTML files for the canton.
+    Returns True when both files were written; False on any error (e.g. no network).
+    The generated HTML files are self-contained Leaflet pages that load WMS tiles
+    from the browser — no backend required at serve time.
+    """
+    try:
+        from src.viz.maps import build_map
+
+        for wms_time, filename in [("1", "map_cdi1.html"), ("2", "map_cdi2.html")]:
+            m = build_map(canton_id=canton.canton_id, wms_time=wms_time)
+            html_str = m.get_root().render()
+            (out_dir / filename).write_text(html_str, encoding="utf-8")
+        return True
+    except Exception as exc:
+        log.warning("Map generation skipped for canton %d: %s", canton.canton_id, exc)
+        return False
+
+
+def _map_section_html(canton: CantonReport, has_maps: bool) -> str:
+    """
+    Bilingual map card with CDI/forecast radio toggle.
+    Sits outside the lang-de/lang-fr divs so only two iframes are created total.
+    """
+    name_de = _html.escape(canton.canton_name_de)
+    name_fr = _html.escape(canton.canton_name_fr)
+
+    if has_maps:
+        map_body = (
+            f'<div class="map-controls">'
+            f'<div class="map-radio-group">'
+            f'<label>'
+            f'<input type="radio" name="map-cdi" class="map-radio-btn" value="map-cdi1" checked>'
+            f'<span class="lang-de">{_html.escape(t("map_cdi_current", "de"))}</span>'
+            f'<span class="lang-fr">{_html.escape(t("map_cdi_current", "fr"))}</span>'
+            f"</label>"
+            f'<label>'
+            f'<input type="radio" name="map-cdi" class="map-radio-btn" value="map-cdi2">'
+            f'<span class="lang-de">{_html.escape(t("map_cdi_forecast", "de"))}</span>'
+            f'<span class="lang-fr">{_html.escape(t("map_cdi_forecast", "fr"))}</span>'
+            f"</label>"
+            f"</div>"
+            f"</div>"
+            f'<iframe id="map-cdi1" class="map-frame" src="map_cdi1.html" loading="lazy"></iframe>'
+            f'<iframe id="map-cdi2" class="map-frame" src="map_cdi2.html" loading="lazy"'
+            f' style="display:none;"></iframe>'
+        )
+    else:
+        map_body = (
+            f'<div class="map-unavailable">'
+            f'<span class="lang-de">{_html.escape(t("map_unavailable", "de"))}</span>'
+            f'<span class="lang-fr">{_html.escape(t("map_unavailable", "fr"))}</span>'
+            f"</div>"
+        )
+
+    legend_de = _cdi_legend_html("de")
+    legend_fr = _cdi_legend_html("fr")
+
+    return (
+        f'<div class="map-card">'
+        f"<h2>"
+        f'<span class="lang-de">CDI-Karte {name_de}</span>'
+        f'<span class="lang-fr">Carte CDI {name_fr}</span>'
+        f"</h2>"
+        f"{map_body}"
+        f'<div class="lang-de">{legend_de}</div>'
+        f'<div class="lang-fr">{legend_fr}</div>'
+        f"</div>"
+    )
+
+
 def _region_table_html(doc, canton: CantonReport, sec_title: str, locale: str) -> str:
     """Render the 'regionen' section as an HTML table with correct locale labels."""
     narratives = _parse_regionen(doc.sections.get("regionen", ""))
     region_names = get_region_names(locale)
+
+    col_canton_recs = _html.escape(t("col_canton_recs", locale))
+    placeholder = _html.escape(t("expert_input_placeholder", locale))
 
     rows: list[str] = []
     for r in canton.regions:
@@ -342,22 +566,13 @@ def _region_table_html(doc, canton: CantonReport, sec_title: str, locale: str) -
             f"{_html.escape(name_raw)}</a>"
         )
 
-        ds = r.discharge
-        if ds.n_total > 0:
-            situation = (
-                f'<span style="font-size:.85rem;">'
-                f"{ds.n_low}/{ds.n_total} {_html.escape(t('stations_low', locale))}"
-                f'<br/><span style="color:#666;">'
-                f"{ds.n_very_low} {_html.escape(t('stations_very_low', locale))}"
-                f"</span></span>"
-            )
-        else:
-            situation = (
-                f'<span style="color:#999;font-size:.85rem;">'
-                f"{_html.escape(t('no_stations', locale))}</span>"
-            )
-
+        situation = _station_details_html(r, locale)
         narrative = narratives.get(r.region_name_de, "–")
+
+        rec_ta = (
+            f'<textarea class="canton-rec" data-region-id="{r.region_id}"'
+            f' placeholder="{placeholder}" rows="3"></textarea>'
+        )
 
         rows.append(
             f"<tr>"
@@ -365,6 +580,7 @@ def _region_table_html(doc, canton: CantonReport, sec_title: str, locale: str) -
             f"<td><b>{name_html}</b></td>"
             f"<td>{situation}</td>"
             f"<td style='font-size:.85rem;'>{narrative}</td>"
+            f"<td>{rec_ta}</td>"
             f"</tr>"
         )
 
@@ -379,6 +595,7 @@ def _region_table_html(doc, canton: CantonReport, sec_title: str, locale: str) -
         f'<table class="region-table"><thead><tr>'
         f"<th>{col_warnstufe}</th><th>{col_region}</th>"
         f"<th>{col_situation}</th><th>{sec_esc}</th>"
+        f"<th>{col_canton_recs}</th>"
         f"</tr></thead><tbody>{''.join(rows)}</tbody></table>"
         f"</div>"
     )
@@ -443,9 +660,15 @@ def _header_html(back_href: str) -> str:
       <span class="lang-de">Trockenheitsbriefing</span>
       <span class="lang-fr">Bulletin s&eacute;cheresse</span>
     </a>
-    <div class="lang-toggle">
-      <button class="lang-btn" data-lang="de">DE</button>
-      <button class="lang-btn" data-lang="fr">FR</button>
+    <div class="header-actions">
+      <button class="action-btn lang-de" onclick="window.print()">&#11015; Export Briefing</button>
+      <button class="action-btn lang-fr" onclick="window.print()">&#11015; Exporter le briefing</button>
+      <button class="action-btn lang-de" onclick="copyPermalink()">&#128279; Link kopieren</button>
+      <button class="action-btn lang-fr" onclick="copyPermalink()">&#128279; Copier le lien</button>
+      <div class="lang-toggle">
+        <button class="lang-btn" data-lang="de">DE</button>
+        <button class="lang-btn" data-lang="fr">FR</button>
+      </div>
     </div>
   </div>
 </header>"""
@@ -468,6 +691,7 @@ def _canton_page(
     doc_de,
     doc_fr,
     ruleset,
+    has_maps: bool = False,
 ) -> str:
     """Generate a bilingual canton briefing page (single HTML, language-toggled by JS)."""
     bg, fg = _WARNSTUFE_COLOURS.get(canton.max_warnlevel, ("#cccccc", "#1a1a1a"))
@@ -515,6 +739,8 @@ Bulletin s&eacute;cheresse {_html.escape(canton.canton_name_fr)}</title>
   </div>
 
   {_banner_html(doc_de, doc_fr)}
+
+  {_map_section_html(canton, has_maps)}
 
   <div class="lang-de">
     {_sections_html(doc_de, canton, ruleset, "de")}
@@ -657,12 +883,14 @@ def generate_site(
         out_dir = site_dir / "canton" / str(canton.canton_id)
         out_dir.mkdir(parents=True, exist_ok=True)
 
+        has_maps = _generate_map_files(canton, out_dir)
+
         try:
             doc_de = render_briefing(canton, ruleset, locale="de")
             doc_fr = render_briefing(canton, ruleset, locale="fr")
-            page_html = _canton_page(canton, doc_de, doc_fr, ruleset)
+            page_html = _canton_page(canton, doc_de, doc_fr, ruleset, has_maps=has_maps)
             (out_dir / "index.html").write_text(page_html, encoding="utf-8")
-            log.info("  canton/%d/index.html", canton.canton_id)
+            log.info("  canton/%d/index.html  (maps=%s)", canton.canton_id, has_maps)
         except Exception as exc:
             log.error("Failed to render canton %d: %s", canton.canton_id, exc)
             errors.append(path.name)

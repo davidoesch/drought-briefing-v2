@@ -78,6 +78,11 @@ UI_STRINGS: dict[str, dict[str, str]] = {
         "stations_low": "Stationen tief",
         "stations_very_low": "sehr tief",
         "no_stations": "Keine Stationen / Daten",
+        "map_cdi_current": "Aktueller CDI",
+        "map_cdi_forecast": "CDI-Prognose Woche 2",
+        "map_unavailable": "Karte nicht verfügbar (kein Netzwerkzugriff beim Build)",
+        "btn_permalink": "Link kopieren",
+        "map_legend_title": "Legende",
     },
     "fr": {
         "lang_toggle_label": "Sprache / Langue",
@@ -147,6 +152,11 @@ UI_STRINGS: dict[str, dict[str, str]] = {
         "stations_low": "stations basses",
         "stations_very_low": "très basses",
         "no_stations": "Pas de stations / données",
+        "map_cdi_current": "CDI actuel",
+        "map_cdi_forecast": "Prévision CDI semaine 2",
+        "map_unavailable": "Carte non disponible (pas d'accès réseau lors du build)",
+        "btn_permalink": "Copier le lien",
+        "map_legend_title": "Légende",
     },
 }
 
