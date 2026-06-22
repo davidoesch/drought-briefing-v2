@@ -26,15 +26,7 @@
     "NAME": "Bern",
     "KANTONSNUM": 2,
     "MAPGEO": "&center=2614322,1185492&z=8",
-    "warnregionen": [
-      {
-        "REGION_NR": 31,
-        "Name": "östlicher Jura"
-      },
-      {
-        "REGION_NR": 32,
-        "Name": "Balsthal"
-      },
+    "warnregionen":
       {
         "REGION_NR": 33,
         "Name": "Unteres Emmental"
@@ -48,10 +40,6 @@
         "Name": "Westliches Berner Oberland"
       },
       {
-        "REGION_NR": 36,
-        "Name": "Greyerzerland"
-      },
-      {
         "REGION_NR": 37,
         "Name": "Oberaargau"
       },
@@ -60,36 +48,8 @@
         "Name": "Oberes Emmental"
       },
       {
-        "REGION_NR": 40,
-        "Name": "westliche Zentralschweiz"
-      },
-      {
         "REGION_NR": 41,
         "Name": "Östliches Berner Oberland"
-      },
-      {
-        "REGION_NR": 45,
-        "Name": "Urner Alpen"
-      },
-      {
-        "REGION_NR": 53,
-        "Name": "Freiberge"
-      },
-      {
-        "REGION_NR": 54,
-        "Name": "westlicher Jura"
-      },
-      {
-        "REGION_NR": 55,
-        "Name": "westliches Mittelland"
-      },
-      {
-        "REGION_NR": 59,
-        "Name": "nördliches Wallis"
-      },
-      {
-        "REGION_NR": 61,
-        "Name": "Goms"
       }
     ]
   },
@@ -98,33 +58,17 @@
     "KANTONSNUM": 3,
     "MAPGEO": "&center=2651011,1213189&z=9",
     "warnregionen": [
-      {
-        "REGION_NR": 33,
-        "Name": "Unteres Emmental"
-      },
-      {
+     {
         "REGION_NR": 37,
         "Name": "Oberaargau"
-      },
-      {
-        "REGION_NR": 38,
-        "Name": "Oberes Emmental"
       },
       {
         "REGION_NR": 40,
         "Name": "westliche Zentralschweiz"
       },
       {
-        "REGION_NR": 41,
-        "Name": "Östliches Berner Oberland"
-      },
-      {
         "REGION_NR": 39,
         "Name": "Freiamt"
-      },
-      {
-        "REGION_NR": 44,
-        "Name": "östliche Zentralschweiz"
       }
     ]
   },
@@ -134,14 +78,6 @@
     "MAPGEO": "&center=2690888,1180766&z=10",
     "warnregionen": [
       {
-        "REGION_NR": 40,
-        "Name": "westliche Zentralschweiz"
-      },
-      {
-        "REGION_NR": 41,
-        "Name": "Östliches Berner Oberland"
-      },
-      {
         "REGION_NR": 44,
         "Name": "östliche Zentralschweiz"
       },
@@ -150,20 +86,8 @@
         "Name": "Urner Alpen"
       },
       {
-        "REGION_NR": 46,
-        "Name": "Surselva"
-      },
-      {
         "REGION_NR": 48,
         "Name": "Glarner Alpen"
-      },
-      {
-        "REGION_NR": 61,
-        "Name": "Goms"
-      },
-      {
-        "REGION_NR": 63,
-        "Name": "Nordtessin"
       }
     ]
   },
@@ -172,25 +96,13 @@
     "KANTONSNUM": 5,
     "MAPGEO": "&center=2700121,1213143&z=10",
     "warnregionen": [
-      {
-        "REGION_NR": 40,
-        "Name": "westliche Zentralschweiz"
-      },
-      {
+     {
         "REGION_NR": 43,
         "Name": "Zürichseebecken"
       },
       {
         "REGION_NR": 44,
         "Name": "östliche Zentralschweiz"
-      },
-      {
-        "REGION_NR": 45,
-        "Name": "Urner Alpen"
-      },
-      {
-        "REGION_NR": 48,
-        "Name": "Glarner Alpen"
       }
     ]
   },
@@ -202,14 +114,6 @@
       {
         "REGION_NR": 40,
         "Name": "westliche Zentralschweiz"
-      },
-      {
-        "REGION_NR": 41,
-        "Name": "Östliches Berner Oberland"
-      },
-      {
-        "REGION_NR": 45,
-        "Name": "Urner Alpen"
       }
     ]
   },
@@ -221,14 +125,6 @@
       {
         "REGION_NR": 40,
         "Name": "westliche Zentralschweiz"
-      },
-      {
-        "REGION_NR": 41,
-        "Name": "Östliches Berner Oberland"
-      },
-      {
-        "REGION_NR": 45,
-        "Name": "Urner Alpen"
       }
     ]
   },
@@ -237,22 +133,6 @@
     "KANTONSNUM": 8,
     "MAPGEO": "&center=2723793,1204621&z=10",
     "warnregionen": [
-      {
-        "REGION_NR": 43,
-        "Name": "Zürichseebecken"
-      },
-      {
-        "REGION_NR": 44,
-        "Name": "östliche Zentralschweiz"
-      },
-      {
-        "REGION_NR": 45,
-        "Name": "Urner Alpen"
-      },
-      {
-        "REGION_NR": 46,
-        "Name": "Surselva"
-      },
       {
         "REGION_NR": 48,
         "Name": "Glarner Alpen"
@@ -267,14 +147,6 @@
       {
         "REGION_NR": 39,
         "Name": "Freiamt"
-      },
-      {
-        "REGION_NR": 43,
-        "Name": "Zürichseebecken"
-      },
-      {
-        "REGION_NR": 44,
-        "Name": "östliche Zentralschweiz"
       }
     ]
   },
@@ -288,24 +160,12 @@
         "Name": "Berner Mittelland"
       },
       {
-        "REGION_NR": 35,
-        "Name": "Westliches Berner Oberland"
-      },
-      {
         "REGION_NR": 36,
         "Name": "Greyerzerland"
       },
       {
         "REGION_NR": 55,
         "Name": "westliches Mittelland"
-      },
-      {
-        "REGION_NR": 56,
-        "Name": "Genferseebecken"
-      },
-      {
-        "REGION_NR": 57,
-        "Name": "Chablais"
       }
     ]
   },
@@ -405,16 +265,8 @@
     "MAPGEO": "&center=2739059,1233041&z=10",
     "warnregionen": [
       {
-        "REGION_NR": 42,
-        "Name": "östliches Mittelland"
-      },
-      {
         "REGION_NR": 43,
         "Name": "Zürichseebecken"
-      },
-      {
-        "REGION_NR": 46,
-        "Name": "Surselva"
       },
       {
         "REGION_NR": 47,
@@ -427,10 +279,6 @@
       {
         "REGION_NR": 51,
         "Name": "Rheintal"
-      },
-      {
-        "REGION_NR": 52,
-        "Name": "Prättigau"
       }
     ]
   },
@@ -440,16 +288,8 @@
     "MAPGEO": "&center=2767576,1169561&z=10",
     "warnregionen": [
       {
-        "REGION_NR": 45,
-        "Name": "Urner Alpen"
-      },
-      {
         "REGION_NR": 46,
         "Name": "Surselva"
-      },
-      {
-        "REGION_NR": 48,
-        "Name": "Glarner Alpen"
       },
       {
         "REGION_NR": 49,
@@ -458,10 +298,6 @@
       {
         "REGION_NR": 50,
         "Name": "südliches Mittelbünden"
-      },
-      {
-        "REGION_NR": 51,
-        "Name": "Rheintal"
       },
       {
         "REGION_NR": 52,
@@ -499,10 +335,6 @@
         "Name": "östlicher Jura"
       },
       {
-        "REGION_NR": 32,
-        "Name": "Balsthal"
-      },
-      {
         "REGION_NR": 33,
         "Name": "Unteres Emmental"
       },
@@ -528,10 +360,6 @@
       {
         "REGION_NR": 42,
         "Name": "östliches Mittelland"
-      },
-      {
-        "REGION_NR": 47,
-        "Name": "Alpstein"
       }
     ]
   },
@@ -540,26 +368,6 @@
     "KANTONSNUM": 21,
     "MAPGEO": "&center=2705583,1128054&z=9",
     "warnregionen": [
-      {
-        "REGION_NR": 45,
-        "Name": "Urner Alpen"
-      },
-      {
-        "REGION_NR": 46,
-        "Name": "Surselva"
-      },
-      {
-        "REGION_NR": 49,
-        "Name": "nördliches Mittelbünden"
-      },
-      {
-        "REGION_NR": 50,
-        "Name": "südliches Mittelbünden"
-      },
-      {
-        "REGION_NR": 61,
-        "Name": "Goms"
-      },
       {
         "REGION_NR": 62,
         "Name": "Westliches Tessin"
@@ -602,10 +410,6 @@
       {
         "REGION_NR": 57,
         "Name": "Chablais"
-      },
-      {
-        "REGION_NR": 59,
-        "Name": "nördliches Wallis"
       }
     ]
   },
@@ -614,26 +418,6 @@
     "KANTONSNUM": 23,
     "MAPGEO": "&center=2612816,1117582&z=9",
     "warnregionen": [
-      {
-        "REGION_NR": 35,
-        "Name": "Westliches Berner Oberland"
-      },
-      {
-        "REGION_NR": 36,
-        "Name": "Greyerzerland"
-      },
-      {
-        "REGION_NR": 41,
-        "Name": "Östliches Berner Oberland"
-      },
-      {
-        "REGION_NR": 45,
-        "Name": "Urner Alpen"
-      },
-      {
-        "REGION_NR": 56,
-        "Name": "Genferseebecken"
-      },
       {
         "REGION_NR": 57,
         "Name": "Chablais"
@@ -653,14 +437,6 @@
       {
         "REGION_NR": 61,
         "Name": "Goms"
-      },
-      {
-        "REGION_NR": 62,
-        "Name": "Westliches Tessin"
-      },
-      {
-        "REGION_NR": 63,
-        "Name": "Nordtessin"
       }
     ]
   },
@@ -670,20 +446,12 @@
     "MAPGEO": "&center=2549904,1205161&z=10",
     "warnregionen": [
       {
-        "REGION_NR": 32,
-        "Name": "Balsthal"
-      },
-      {
         "REGION_NR": 53,
         "Name": "Freiberge"
       },
       {
         "REGION_NR": 54,
         "Name": "westlicher Jura"
-      },
-      {
-        "REGION_NR": 55,
-        "Name": "westliches Mittelland"
       }
     ]
   },
