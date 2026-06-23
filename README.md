@@ -1,69 +1,178 @@
-# One Click Drought Briefing V2
+# Drought Briefing
 
-**Automated drought situation reports for Swiss authorities — from open federal data to a ready-to-share bulletin in seconds.**
+Automated drought situation reports for Swiss authorities.
 
-Built at [GovTech Hackathon 2026](https://hack.govtech.ch) in partnership with swisstopo, BAFU (FOEN), and MeteoSwiss.
+The system downloads federal open data every day, applies drought rules, and publishes a static website.
+No server is needed. Everything runs on GitHub.
 
-**[Live Demo (GitHub Pages)](https://cboodnee.github.io/Drought-Briefing/) · [Streamlit Cloud](https://drought-briefing.streamlit.app/)**
+Live site: published via GitHub Pages (see Settings > Pages in this repository).
 
 ---
 
-## The Problem
+## How the system works
 
-> Challenge here 👉 https://govtech.digisus-lab.ch/project/16
+Every day, GitHub Actions runs a pipeline:
 
-During drought events, cantonal and municipal crisis teams must quickly assess the situation and communicate it in plain language. Today that means manually pulling data from multiple federal portals, interpreting technical indicators, and writing reports by hand — a process that takes hours, produces inconsistent results across cantons, and only happens at all when a federal warning is already active.
+1. Downloads drought data from federal open data portals (BAFU, SwissEO, swisstopo).
+2. Calculates indicators per warning region and per canton.
+3. Applies drought rules from a YAML file to produce warning levels and text.
+4. Generates a static website with one page per canton.
+5. Publishes the website to GitHub Pages.
 
-## What We Built
+All drought thresholds, classification rules, and bulletin texts live in YAML files under `data/ruleset/` and `config/`.
+No Python knowledge is needed to update them.
 
-A one-click pipeline that turns federal open data into a structured, bilingual (DE/FR) drought bulletin for any Swiss canton — in seconds. The bulletin includes:
+---
 
-- **Warning level badge** (BAFU Gefahrenstufe 1–5) with plain-language situation summary
-- **Regional breakdown** — CDI, SPI-3m, soil moisture, VHI, precipitation, and discharge per Warnregion
-- **Interactive map** (choropleth by CDI / warning level) with static PNG fallback for export
-- **Time-series chart** (CDI trend + SPI-3m, 52 weeks)
-- **Action recommendations** driven by the warning level, populated from a YAML ruleset
-- **Expert note fields** per region — editable before export
-- **Self-contained HTML export** — no external URLs, suitable for government infrastructure
-- **Data quality banner** — staleness, coverage, and outlier flags surfaced automatically
+## Cookbook
 
-## How It Works
+### How to change a drought threshold (US-01)
+
+Domain experts can change the thresholds that determine warning levels without touching any code.
+
+1. Open the file `data/ruleset/canton-bulletin.yaml` in GitHub (click the file, then the pencil icon).
+2. Find the section you want to change. Example: the CDI threshold for warning level 3.
+3. Edit the number directly.
+4. Scroll down, write a short description of your change (e.g. "Adjust CDI threshold for level 3"), and click "Commit changes".
+5. GitHub Actions will run within a few minutes and publish the updated site.
+
+Tip: Each threshold in the YAML file has a comment explaining what it controls. Read the comment before changing the value.
+
+---
+
+### How to update bulletin texts and translations (US-02)
+
+All texts shown on the website are stored in YAML files. You do not need to edit HTML or JavaScript.
+
+**To change recommendation texts (German and French):**
+
+1. Open `data/ruleset/canton-bulletin.yaml`.
+2. Find the `recommendations` section for the warning level you want to update.
+3. Edit the German (`de`) and French (`fr`) texts.
+4. Commit your change. The site will update automatically.
+
+**To change UI labels (buttons, table headers, etc.):**
+
+1. Open `src/i18n/strings.py`.
+2. Find the label you want to change in the `"de"` block (German) and the `"fr"` block (French).
+3. Edit the text string.
+4. Commit your change.
+
+Note: If you are not sure which key controls which label, look at the label on the published site, then search for that text in the file using GitHub's search (Ctrl+F in the browser).
+
+---
+
+### How to manage daily automation (US-03 — for administrators)
+
+The daily pipeline runs automatically using GitHub Actions.
+
+**To check whether the latest run succeeded:**
+
+1. Click the "Actions" tab in this repository.
+2. The most recent workflow run is shown at the top.
+3. A green check mark means success. A red cross means it failed.
+4. Click the run to see the log and find the error.
+
+**To run the pipeline manually (for example, after a configuration change):**
+
+1. Click the "Actions" tab.
+2. Select the workflow named "Daily update" (or similar).
+3. Click "Run workflow" on the right side, then confirm.
+
+**To change the schedule (for example, to run at a different time):**
+
+1. Open `.github/workflows/daily.yml` (or the workflow file listed under Actions).
+2. Find the `schedule:` section and edit the cron expression.
+3. Commit your change.
+
+**If the pipeline fails because data is unavailable:**
+
+The pipeline falls back to fixture data automatically. The published site will show a data quality warning, but it will not go offline. Check the Actions log for details.
+
+---
+
+### How to access the drought briefings as a public user (US-04)
+
+The website is accessible at the GitHub Pages URL for this repository.
+
+1. Go to the repository's Settings > Pages to find the published URL.
+2. Open the URL in any web browser. No login is required.
+3. Select a canton from the overview page.
+4. Switch between German and French using the DE / FR buttons in the top right corner.
+5. To save a PDF, use your browser's print function (Ctrl+P or Cmd+P) and choose "Save as PDF".
+6. To share a link in a specific language, click "Link kopieren" / "Copier le lien" in the header. The link includes the language parameter.
+
+---
+
+## Repository structure
 
 ```
-DataBundle (STAC / fixtures)
-    → CantonReport (aggregation pipeline)
-        → BriefingDocument (Jinja2 / YAML ruleset)
-            → Streamlit UI  +  HTML export
+config/
+  settings.py         — canton and region definitions, colour codes
+  sources.yaml        — list of data source URLs shown on the website
+
+data/
+  ruleset/
+    canton-bulletin.yaml   — drought rules, thresholds, and bulletin texts
+
+scripts/
+  aggregate.py        — downloads data and computes canton reports
+  generate_site.py    — builds the static HTML website from JSON outputs
+
+src/
+  aggregation/        — indicator calculation per region and canton
+  briefing/           — applies YAML rules to produce structured briefing documents
+  data/               — data clients (STAC, warnkarte, VHI, hydro)
+  i18n/               — multilingual UI strings
+
+tests/                — automated tests (run via GitHub Actions or locally)
+
+.github/
+  workflows/          — GitHub Actions pipeline definitions
 ```
 
-Data is loaded from the [BGDI STAC collection `ch.bafu.trockenheitsdaten-numerisch`](https://www.trockenheit.admin.ch), with live fallback to fixture data. Warning levels are fetched from the geo.admin.ch REST API (`ch.bafu.trockenheitswarnkarte`). Vegetation health (VHI) is fetched from SwissEO. All three clients fall back to bundled fixture data when the network is unavailable.
+---
 
-Bulletin text lives entirely in `data/ruleset/canton-bulletin.yaml` — no strings are hardcoded in Python. Thresholds, action recommendations, nomenclature, and section templates are all editable without touching code.
+## Running locally
 
-## Data Sources
+Requirements: Python 3.11 or later, and the `uv` package manager.
 
-| Source | What we use |
-|---|---|
-| BGDI STAC `ch.bafu.trockenheitsdaten-numerisch` | CDI, SPI, soil moisture, precipitation, hydro indices (weekly per Warnregion) |
-| geo.admin.ch REST API `ch.bafu.trockenheitswarnkarte` | Official BAFU warning level (Gefahrenstufe 1–5) per region |
-| SwissEO VHI endpoint | Vegetation Health Index per region |
-| hydrodaten.admin.ch (BAFU station CSVs) | Discharge (Abfluss) per hydro station with low-flow thresholds |
-| `data/kantone_warnregionen.json` | Canton → Warnregion mapping, center coordinates |
-
-## Running Locally
-
-**Docker (recommended):**
-```bash
-make build
-make up        # → http://localhost:8501
 ```
-
-**Local (requires [uv](https://github.com/astral-sh/uv)):**
-```bash
-uv run streamlit run app.py
+uv sync
 uv run pytest tests/ -v
+uv run python scripts/aggregate.py
+uv run python scripts/generate_site.py
 ```
+
+The generated site is written to `site/`. Open `site/index.html` in a browser to preview it.
+
+---
+
+## Data sources
+
+| Source | What is used |
+|---|---|
+| BGDI STAC `ch.bafu.trockenheitsdaten-numerisch` | CDI, SPI, soil moisture, precipitation, hydro indices per warning region |
+| geo.admin.ch REST API `ch.bafu.trockenheitswarnkarte` | BAFU warning level per region |
+| SwissEO VHI endpoint | Vegetation Health Index per region |
+| hydrodaten.admin.ch | Discharge per hydro station with low-flow thresholds |
+
+---
+
+## Contributing
+
+Contributions are welcome.
+
+For questions about drought methodology, contact BAFU.
+
+For technical issues, open a GitHub issue.
+
+To propose a change to thresholds or texts: create a branch, edit the relevant YAML file, and open a pull request. An administrator will review and merge it.
+
+---
 
 ## Team
 
-David Oesch · Joan Sturm · Fabia Huesler · Christopher Boodnee · Lea Stauber · Benjamin Meyer · Luca Huesler · Simon Jaun · Chantal Camenisch
+David Oesch, Joan Sturm, Fabia Huesler, Christopher Boodnee, Lea Stauber, Benjamin Meyer, Luca Huesler, Simon Jaun, Chantal Camenisch.
+
+Built at GovTech Hackathon 2026 in partnership with swisstopo, BAFU, and MeteoSwiss.

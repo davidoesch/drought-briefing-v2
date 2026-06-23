@@ -30,7 +30,9 @@ _REPO_ROOT = Path(__file__).resolve().parents[1]
 if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
 
-from config.settings import CDI_COLOURS, CDI_LABELS, CDI_LABELS_FR
+import yaml
+
+from config.settings import CANTON_ABBREV, CDI_COLOURS, CDI_LABELS, CDI_LABELS_FR
 from src.briefing.renderer import load_ruleset, render_briefing
 from src.i18n.strings import get_region_names, t
 from src.models import (
@@ -43,7 +45,10 @@ from src.models import (
 
 PROCESSED_DIR = _REPO_ROOT / "data" / "processed"
 RULESET_PATH = _REPO_ROOT / "data" / "ruleset" / "canton-bulletin.yaml"
+SOURCES_PATH = _REPO_ROOT / "config" / "sources.yaml"
 SITE_DIR = _REPO_ROOT / "site"
+
+_FAVICON_URL = "https://www.admin.ch/favicon.ico"
 
 _WARNSTUFE_COLOURS: dict[int, tuple[str, str]] = {
     1: ("#6bbd50", "#ffffff"),
@@ -51,6 +56,17 @@ _WARNSTUFE_COLOURS: dict[int, tuple[str, str]] = {
     3: ("#ff8c00", "#ffffff"),
     4: ("#e02020", "#ffffff"),
     5: ("#8b0000", "#ffffff"),
+}
+
+# Legend colours for the CDI scale — aligned with the Warnstufe palette so the
+# legend is visually consistent with the rest of the site.
+_CDI_LEGEND_COLOURS: dict[int, str] = {
+    0: "#d4edda",  # no drought — pale green
+    1: "#6bbd50",  # slight     — wl-1 green
+    2: "#f7e84c",  # moderate   — wl-2 yellow
+    3: "#ff8c00",  # severe     — wl-3 orange
+    4: "#e02020",  # extreme    — wl-4 red
+    5: "#8b0000",  # exceptional— wl-5 dark red
 }
 
 logging.basicConfig(level=logging.INFO, format="%(levelname)s %(message)s")
@@ -153,6 +169,9 @@ main{padding:2rem 0 3rem}
   .region-table{font-size:.78rem}
 }
 
+/* BETA badge */
+.beta-badge{color:var(--red);font-size:.6rem;font-weight:900;letter-spacing:.08em;text-transform:uppercase;border:1.5px solid var(--red);padding:.05rem .3rem;border-radius:2px;line-height:1;flex-shrink:0;align-self:center}
+
 /* Action buttons (export / permalink) */
 .header-actions{display:flex;align-items:center;gap:.5rem;flex-wrap:wrap}
 .action-btn{border:1px solid var(--border);background:var(--white);color:var(--blue);padding:.3rem .65rem;font-size:.82rem;cursor:pointer;border-radius:4px;font-family:inherit;font-weight:700;transition:background .1s,color .1s}
@@ -182,11 +201,23 @@ main{padding:2rem 0 3rem}
   .site-header{position:static}
   .header-actions{display:none!important}
   .lang-toggle{display:none!important}
-  .map-frame{height:260px}
+  /* Interactive map iframes don't render correctly in print — use the static PNG instead */
+  .map-frame{display:none!important}
+  .map-controls{display:none!important}
+  .map-print-img{display:block!important;width:100%;max-height:320px;object-fit:contain;border:1px solid var(--border);border-radius:4px}
+  .map-print-note{display:block!important;text-align:center;color:var(--muted);font-style:italic;font-size:.88rem;padding:1rem;background:var(--bg);border-radius:4px}
   .canton-rec{border:none!important;resize:none;background:transparent;min-height:unset}
   .card,.map-card{box-shadow:none;break-inside:avoid}
   .site-footer{display:none}
   .quality-bar{break-before:page}
+  /* Preserve background colours in print (H) */
+  .lead-card,.badge-large,.wl,.wl-1,.wl-2,.wl-3,.wl-4,.wl-5,.cdi-swatch{
+    -webkit-print-color-adjust:exact;print-color-adjust:exact
+  }
+}
+@media screen{
+  .map-print-img{display:none!important}
+  .map-print-note{display:none!important}
 }
 """
 
@@ -454,11 +485,11 @@ def _station_details_html(r: RegionReport, locale: str) -> str:
 
 
 def _cdi_legend_html(locale: str) -> str:
-    """Horizontal CDI colour legend strip."""
+    """Horizontal CDI colour legend strip using site-aligned colours."""
     labels = CDI_LABELS_FR if locale == "fr" else CDI_LABELS
     title = _html.escape(t("map_legend_title", locale))
     items: list[str] = []
-    for cdi_val, colour in sorted(CDI_COLOURS.items()):
+    for cdi_val, colour in sorted(_CDI_LEGEND_COLOURS.items()):
         label = _html.escape(labels.get(cdi_val, str(cdi_val)))
         items.append(
             f'<span class="cdi-legend-item">'
@@ -494,7 +525,22 @@ def _generate_map_files(canton: CantonReport, out_dir: Path) -> bool:
         return False
 
 
-def _map_section_html(canton: CantonReport, has_maps: bool) -> str:
+def _generate_print_png(canton: CantonReport, out_dir: Path) -> bool:
+    """
+    Generate a static PNG of the CDI map for PDF export.
+    Requires network access + Pillow. Returns False on any error.
+    """
+    try:
+        from src.viz.maps import build_export_map
+        png_bytes = build_export_map(canton_id=canton.canton_id)
+        (out_dir / "map_print.png").write_bytes(png_bytes)
+        return True
+    except Exception as exc:
+        log.warning("Print PNG skipped for canton %d: %s", canton.canton_id, exc)
+        return False
+
+
+def _map_section_html(canton: CantonReport, has_maps: bool, has_print_png: bool = False) -> str:
     """
     Bilingual map card with CDI/forecast radio toggle.
     Sits outside the lang-de/lang-fr divs so only two iframes are created total.
@@ -533,6 +579,14 @@ def _map_section_html(canton: CantonReport, has_maps: bool) -> str:
     legend_de = _cdi_legend_html("de")
     legend_fr = _cdi_legend_html("fr")
 
+    if has_print_png:
+        print_el = '<img src="map_print.png" class="map-print-img" alt="CDI-Karte">'
+    else:
+        print_el = (
+            '<div class="map-print-note lang-de">Karte im Browser ansehen</div>'
+            '<div class="map-print-note lang-fr">Voir la carte dans le navigateur</div>'
+        )
+
     return (
         f'<div class="map-card">'
         f"<h2>"
@@ -540,6 +594,7 @@ def _map_section_html(canton: CantonReport, has_maps: bool) -> str:
         f'<span class="lang-fr">Carte CDI {name_fr}</span>'
         f"</h2>"
         f"{map_body}"
+        f"{print_el}"
         f'<div class="lang-de">{legend_de}</div>'
         f'<div class="lang-fr">{legend_fr}</div>'
         f"</div>"
@@ -621,6 +676,41 @@ def _sections_html(doc, canton: CantonReport, ruleset, locale: str) -> str:
     return "\n".join(parts)
 
 
+def _load_sources(sources_path: Path) -> list[dict]:
+    """Load data sources list from config/sources.yaml. Returns [] on error."""
+    try:
+        raw = yaml.safe_load(sources_path.read_text(encoding="utf-8"))
+        return raw.get("data_sources", []) if isinstance(raw, dict) else []
+    except Exception as exc:
+        log.warning("Could not load %s: %s", sources_path, exc)
+        return []
+
+
+def _sources_card_html(sources: list[dict]) -> str:
+    """Render the data sources as a footer card visible in both languages."""
+    if not sources:
+        return ""
+    items = "".join(
+        f'<li>'
+        f'<a href="{_html.escape(src["url"])}" target="_blank" rel="noopener">'
+        f'{_html.escape(src["title"])}'
+        f"</a>"
+        f' &mdash; {_html.escape(src.get("provider", ""))}'
+        f"</li>"
+        for src in sources
+        if src.get("url") and src.get("title")
+    )
+    return (
+        f'<div class="card" style="margin-top:1.5rem;">'
+        f'<h2>'
+        f'<span class="lang-de">Datenquellen</span>'
+        f'<span class="lang-fr">Sources de donn&eacute;es</span>'
+        f"</h2>"
+        f"<ul style='list-style:none;'>{items}</ul>"
+        f"</div>"
+    )
+
+
 def _banner_html(doc_de, doc_fr) -> str:
     parts: list[str] = []
     for locale, doc in (("de", doc_de), ("fr", doc_fr)):
@@ -656,7 +746,9 @@ def _header_html(back_href: str) -> str:
 <header class="site-header">
   <div class="container header-inner">
     <a href="{back_href}" class="site-brand">
-      <span aria-hidden="true">&#127807;</span>
+      <span class="beta-badge">BETA</span>
+      <img src="{_FAVICON_URL}" width="18" height="18" alt="" aria-hidden="true"
+           style="image-rendering:auto;display:block;">
       <span class="lang-de">Trockenheitsbriefing</span>
       <span class="lang-fr">Bulletin s&eacute;cheresse</span>
     </a>
@@ -692,6 +784,8 @@ def _canton_page(
     doc_fr,
     ruleset,
     has_maps: bool = False,
+    has_print_png: bool = False,
+    sources: list[dict] | None = None,
 ) -> str:
     """Generate a bilingual canton briefing page (single HTML, language-toggled by JS)."""
     bg, fg = _WARNSTUFE_COLOURS.get(canton.max_warnlevel, ("#cccccc", "#1a1a1a"))
@@ -701,7 +795,6 @@ def _canton_page(
         else str(canton.data_timestamp)
     )
     q = canton.quality
-
     return f"""<!DOCTYPE html>
 <html lang="de">
 <head>
@@ -709,6 +802,7 @@ def _canton_page(
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Trockenheitsbriefing {_html.escape(canton.canton_name_de)} / \
 Bulletin s&eacute;cheresse {_html.escape(canton.canton_name_fr)}</title>
+  <link rel="icon" href="{_FAVICON_URL}">
   <link rel="stylesheet" href="../../assets/style.css">
 </head>
 <body>
@@ -740,7 +834,7 @@ Bulletin s&eacute;cheresse {_html.escape(canton.canton_name_fr)}</title>
 
   {_banner_html(doc_de, doc_fr)}
 
-  {_map_section_html(canton, has_maps)}
+  {_map_section_html(canton, has_maps, has_print_png)}
 
   <div class="lang-de">
     {_sections_html(doc_de, canton, ruleset, "de")}
@@ -750,6 +844,8 @@ Bulletin s&eacute;cheresse {_html.escape(canton.canton_name_fr)}</title>
   </div>
 
   {_further_links_html(doc_de, doc_fr)}
+
+  {_sources_card_html(sources or [])}
 
   <div class="quality-bar">
     <span class="lang-de">
@@ -769,9 +865,11 @@ Bulletin s&eacute;cheresse {_html.escape(canton.canton_name_fr)}</title>
 </html>"""
 
 
-def _generate_index(cantons: list[CantonReport], site_dir: Path) -> None:
+def _generate_index(cantons: list[CantonReport], site_dir: Path, sources: list[dict] | None = None) -> None:
     cards: list[str] = []
-    for c in sorted(cantons, key=lambda x: x.canton_id):
+    # A) Sort alphabetically by German canton name
+    for c in sorted(cantons, key=lambda x: x.canton_name_de):
+        abbrev = CANTON_ABBREV.get(c.canton_id, str(c.canton_id))
         ts = (
             c.data_timestamp.strftime("%d.%m.%Y")
             if isinstance(c.data_timestamp, datetime)
@@ -784,7 +882,7 @@ def _generate_index(cantons: list[CantonReport], site_dir: Path) -> None:
             f"{c.max_warnlevel}</span>"
         )
         cards.append(
-            f'<a href="canton/{c.canton_id}/index.html" class="canton-card">'
+            f'<a href="canton/{abbrev}/index.html" class="canton-card">'
             f"{badge}"
             f'<div class="canton-card-info">'
             f'<div class="canton-name lang-de">{_html.escape(c.canton_name_de)}</div>'
@@ -800,6 +898,7 @@ def _generate_index(cantons: list[CantonReport], site_dir: Path) -> None:
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Trockenheitsbriefing / Bulletin s&eacute;cheresse</title>
+  <link rel="icon" href="{_FAVICON_URL}">
   <link rel="stylesheet" href="assets/style.css">
 </head>
 <body>
@@ -819,6 +918,7 @@ def _generate_index(cantons: list[CantonReport], site_dir: Path) -> None:
   <div class="canton-grid">
     {chr(10).join(cards)}
   </div>
+  {_sources_card_html(sources or [])}
 </main>
 
 {_footer_html()}
@@ -858,6 +958,9 @@ def generate_site(
     log.info("Loading ruleset from %s ...", ruleset_path)
     ruleset = load_ruleset(ruleset_path)
 
+    sources = _load_sources(SOURCES_PATH)
+    log.info("Loaded %d data sources from %s", len(sources), SOURCES_PATH)
+
     site_dir.mkdir(parents=True, exist_ok=True)
     _write_assets(site_dir)
 
@@ -877,28 +980,34 @@ def generate_site(
             errors.append(path.name)
             continue
 
-        # Copy the processed JSON into site/data/cantons/
+        # Copy the processed JSON into site/data/cantons/ (keyed by numeric ID)
         shutil.copy2(path, site_data_dir / path.name)
 
-        out_dir = site_dir / "canton" / str(canton.canton_id)
+        # C) Use the official canton abbreviation (e.g. BE, ZH) for the URL
+        abbrev = CANTON_ABBREV.get(canton.canton_id, str(canton.canton_id))
+        out_dir = site_dir / "canton" / abbrev
         out_dir.mkdir(parents=True, exist_ok=True)
 
         has_maps = _generate_map_files(canton, out_dir)
+        has_print_png = _generate_print_png(canton, out_dir) if has_maps else False
 
         try:
             doc_de = render_briefing(canton, ruleset, locale="de")
             doc_fr = render_briefing(canton, ruleset, locale="fr")
-            page_html = _canton_page(canton, doc_de, doc_fr, ruleset, has_maps=has_maps)
+            page_html = _canton_page(
+                canton, doc_de, doc_fr, ruleset,
+                has_maps=has_maps, has_print_png=has_print_png, sources=sources,
+            )
             (out_dir / "index.html").write_text(page_html, encoding="utf-8")
-            log.info("  canton/%d/index.html  (maps=%s)", canton.canton_id, has_maps)
+            log.info("  canton/%s/index.html  (maps=%s print_png=%s)", abbrev, has_maps, has_print_png)
         except Exception as exc:
-            log.error("Failed to render canton %d: %s", canton.canton_id, exc)
+            log.error("Failed to render canton %s: %s", abbrev, exc)
             errors.append(path.name)
 
         cantons.append(canton)
 
     if cantons:
-        _generate_index(cantons, site_dir)
+        _generate_index(cantons, site_dir, sources=sources)
 
     if errors:
         log.error("Site generation completed with %d error(s): %s", len(errors), errors)

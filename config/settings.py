@@ -139,6 +139,13 @@ STATION_REGION_MAP_NAME: Final[str] = "station_region_mapping.json"
 
 GEOJSON_FIXTURE: Final[Path] = DATA_DIR / "berne_warnregionen.geojson"
 
+CANTON_ABBREV: Final[dict[int, str]] = {
+    1: "ZH", 2: "BE", 3: "LU", 4: "UR", 5: "SZ", 6: "OW", 7: "NW",
+    8: "GL", 9: "ZG", 10: "FR", 11: "SO", 12: "BS", 13: "BL", 14: "SH",
+    15: "AR", 16: "AI", 17: "SG", 18: "GR", 19: "AG", 20: "TG", 21: "TI",
+    22: "VD", 23: "VS", 24: "NE", 25: "GE", 26: "JU",
+}
+
 CANTON_NAMES: Final[dict[int, dict[str, str]]] = {
     1:  {"de": "Zürich",                    "fr": "Zurich"},
     2:  {"de": "Bern",                      "fr": "Berne",    "it": "Berna"},

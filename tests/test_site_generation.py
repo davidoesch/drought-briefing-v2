@@ -312,7 +312,7 @@ class TestGenerateSite:
     # --- Output files exist ---
 
     def test_canton_index_html_created(self, built_site):
-        assert (built_site / "canton" / "2" / "index.html").exists()
+        assert (built_site / "canton" / "BE" / "index.html").exists()
 
     def test_index_html_created(self, built_site):
         assert (built_site / "index.html").exists()
@@ -329,33 +329,33 @@ class TestGenerateSite:
     # --- HTML correctness ---
 
     def test_canton_page_is_valid_html(self, built_site):
-        content = (built_site / "canton" / "2" / "index.html").read_text(encoding="utf-8")
+        content = (built_site / "canton" / "BE" / "index.html").read_text(encoding="utf-8")
         assert "<!DOCTYPE html>" in content
         assert "<html" in content
         assert "</html>" in content
 
     def test_canton_page_contains_canton_name_de(self, built_site):
-        content = (built_site / "canton" / "2" / "index.html").read_text(encoding="utf-8")
+        content = (built_site / "canton" / "BE" / "index.html").read_text(encoding="utf-8")
         assert "Bern" in content
 
     def test_canton_page_contains_canton_name_fr(self, built_site):
-        content = (built_site / "canton" / "2" / "index.html").read_text(encoding="utf-8")
+        content = (built_site / "canton" / "BE" / "index.html").read_text(encoding="utf-8")
         # French name for Bern
         assert "Berne" in content
 
     def test_canton_page_has_both_lang_classes(self, built_site):
-        content = (built_site / "canton" / "2" / "index.html").read_text(encoding="utf-8")
+        content = (built_site / "canton" / "BE" / "index.html").read_text(encoding="utf-8")
         assert "lang-de" in content
         assert "lang-fr" in content
 
     def test_canton_page_links_to_assets(self, built_site):
-        content = (built_site / "canton" / "2" / "index.html").read_text(encoding="utf-8")
+        content = (built_site / "canton" / "BE" / "index.html").read_text(encoding="utf-8")
         assert "../../assets/style.css" in content
         assert "../../assets/app.js" in content
 
     def test_index_contains_canton_link(self, built_site):
         content = (built_site / "index.html").read_text(encoding="utf-8")
-        assert "canton/2/index.html" in content
+        assert "canton/BE/index.html" in content
 
     def test_index_has_both_lang_classes(self, built_site):
         content = (built_site / "index.html").read_text(encoding="utf-8")
@@ -370,7 +370,7 @@ class TestGenerateSite:
     # --- Language switching ---
 
     def test_lang_toggle_buttons_present(self, built_site):
-        content = (built_site / "canton" / "2" / "index.html").read_text(encoding="utf-8")
+        content = (built_site / "canton" / "BE" / "index.html").read_text(encoding="utf-8")
         assert 'data-lang="de"' in content
         assert 'data-lang="fr"' in content
 
@@ -397,14 +397,14 @@ class TestGenerateSite:
         assert "#DC0000" in css or "#dc0000" in css.lower()
 
     def test_canton_page_has_warnlevel_badge(self, built_site):
-        content = (built_site / "canton" / "2" / "index.html").read_text(encoding="utf-8")
+        content = (built_site / "canton" / "BE" / "index.html").read_text(encoding="utf-8")
         assert "wl-" in content
         assert "badge-large" in content
 
     # --- No computation markers ---
 
     def test_no_jinja2_syntax_leaks_into_output(self, built_site):
-        content = (built_site / "canton" / "2" / "index.html").read_text(encoding="utf-8")
+        content = (built_site / "canton" / "BE" / "index.html").read_text(encoding="utf-8")
         assert "{{" not in content
         assert "{%" not in content
 

@@ -436,23 +436,23 @@ class TestMultilingualOutputs:
         assert any_differ, "DE and FR section content is identical — locale rendering may be broken"
 
     def test_canton_page_contains_lang_de_class(self, full_pipeline):
-        content = (full_pipeline["site"] / "canton" / "2" / "index.html").read_text("utf-8")
+        content = (full_pipeline["site"] / "canton" / "BE" / "index.html").read_text("utf-8")
         assert "lang-de" in content
 
     def test_canton_page_contains_lang_fr_class(self, full_pipeline):
-        content = (full_pipeline["site"] / "canton" / "2" / "index.html").read_text("utf-8")
+        content = (full_pipeline["site"] / "canton" / "BE" / "index.html").read_text("utf-8")
         assert "lang-fr" in content
 
     def test_canton_page_contains_german_canton_name(self, full_pipeline, canton_2_report):
-        content = (full_pipeline["site"] / "canton" / "2" / "index.html").read_text("utf-8")
+        content = (full_pipeline["site"] / "canton" / "BE" / "index.html").read_text("utf-8")
         assert canton_2_report.canton_name_de in content
 
     def test_canton_page_contains_french_canton_name(self, full_pipeline, canton_2_report):
-        content = (full_pipeline["site"] / "canton" / "2" / "index.html").read_text("utf-8")
+        content = (full_pipeline["site"] / "canton" / "BE" / "index.html").read_text("utf-8")
         assert canton_2_report.canton_name_fr in content
 
     def test_canton_page_has_language_toggle_buttons(self, full_pipeline):
-        content = (full_pipeline["site"] / "canton" / "2" / "index.html").read_text("utf-8")
+        content = (full_pipeline["site"] / "canton" / "BE" / "index.html").read_text("utf-8")
         assert 'data-lang="de"' in content
         assert 'data-lang="fr"' in content
 
