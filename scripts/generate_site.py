@@ -324,32 +324,57 @@ _JS = """\
     var span = label.querySelector('.lang-' + lang);
     return span ? span.textContent.trim() : '';
   }
-  function _notifyActiveIframe() {
-    var active = document.querySelector('.map-frame-active');
-    if (!active) return;
-    try { active.contentWindow.dispatchEvent(new Event('beforeprint')); } catch (e) {}
-    try { active.contentWindow.postMessage('drought:beforeprint', '*'); } catch (e) {}
+  function _notifyIframe(frame) {
+    if (!frame) return;
+    try { frame.contentWindow.dispatchEvent(new Event('beforeprint')); } catch (e) {}
+    try { frame.contentWindow.postMessage('drought:beforeprint', '*'); } catch (e) {}
   }
   function _setMapPrintLabel() {
     var el = document.getElementById('map-print-label');
     if (el) el.textContent = _getActiveMapLabel();
   }
 
-  /* ---- export button: notify iframe, wait for refit, then open print dialog ---- */
+  /*
+   * exportBriefing():
+   *   1. Force the active map iframe to A4-print dimensions NOW (while still
+   *      in screen mode) so that Leaflet refits to the right viewport size.
+   *   2. Notify the iframe → Leaflet calls invalidateSize + fitBounds.
+   *   3. After 900 ms (enough for tiles to load) open the print dialog.
+   *   4. On afterprint, remove the forced dimensions.
+   *
+   * This avoids the race where print CSS shrinks the iframe AFTER Leaflet
+   * already rendered for screen dimensions.
+   */
   window.exportBriefing = function () {
     _setMapPrintLabel();
-    _notifyActiveIframe();
-    /* 600 ms gives Leaflet time to invalidateSize + fitBounds before the snapshot */
-    setTimeout(window.print, 600);
+    var active = document.querySelector('.map-frame-active');
+    if (active) {
+      /* A4 content width ≈ 680 px at 96 dpi with standard margins.
+         Use the smaller of the current card width and 680 px. */
+      var card = active.closest('.map-card') || active.parentNode;
+      var printW = Math.min(card ? card.offsetWidth : 680, 680);
+      active.style.width  = printW + 'px';
+      active.style.height = '260px';
+      /* Let the browser apply the new dimensions, then tell Leaflet */
+      requestAnimationFrame(function () {
+        _notifyIframe(active);
+        setTimeout(window.print, 900);
+      });
+    } else {
+      setTimeout(window.print, 100);
+    }
   };
 
-  /* ---- before print (Ctrl+P path): notify iframe and set label synchronously ---- */
+  /* ---- before print (Ctrl+P path) — best-effort, no pre-resize possible ---- */
   window.addEventListener('beforeprint', function () {
     _setMapPrintLabel();
-    _notifyActiveIframe();
+    _notifyIframe(document.querySelector('.map-frame-active'));
   });
 
   window.addEventListener('afterprint', function () {
+    /* Restore any inline styles set by exportBriefing */
+    var active = document.querySelector('.map-frame-active');
+    if (active) { active.style.width = ''; active.style.height = ''; }
     var el = document.getElementById('map-print-label');
     if (el) el.textContent = '';
   });
