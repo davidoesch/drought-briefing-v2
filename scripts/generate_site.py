@@ -32,7 +32,7 @@ if str(_REPO_ROOT) not in sys.path:
 
 import yaml
 
-from config.settings import CANTON_ABBREV, CDI_COLOURS, CDI_LABELS, CDI_LABELS_FR
+from config.settings import CANTON_ABBREV
 from src.briefing.renderer import load_ruleset, render_briefing
 from src.i18n.strings import get_region_names, t
 from src.models import (
@@ -197,6 +197,7 @@ main{padding:2rem 0 3rem}
 .canton-rec{width:100%;min-height:72px;resize:vertical;border:1px solid var(--border);border-radius:4px;padding:.35rem .45rem;font-family:inherit;font-size:.82rem;color:var(--text);background:var(--white)}
 .canton-rec:focus{outline:2px solid var(--blue);outline-offset:1px;border-color:var(--blue)}
 .canton-rec-print{display:none}
+.map-print-label{display:none}
 
 /* Map card */
 .map-card{background:var(--white);border:1px solid var(--border);border-radius:6px;padding:1.25rem 1.5rem;margin-bottom:1.25rem;box-shadow:var(--shadow)}
@@ -222,6 +223,8 @@ main{padding:2rem 0 3rem}
   .map-frame{display:none!important}
   .map-frame-active{display:block!important;height:260px;width:100%}
   .map-controls{display:none!important}
+  /* Label showing which CDI layer is displayed */
+  .map-print-label{display:block!important;font-size:.82rem;font-style:italic;color:var(--muted);margin:.3rem 0 .5rem}
   /* Swap textarea for its sibling div so all text is visible (no scroll cutoff) */
   .canton-rec{display:none!important}
   .canton-rec-print{display:block!important;white-space:pre-wrap;word-break:break-word;font-size:.82rem;color:var(--text);padding:.35rem 0;min-height:1em}
@@ -248,24 +251,51 @@ _JS = """\
       btn.classList.toggle('active', btn.dataset.lang === lang);
     });
     try { localStorage.setItem('droughtLang', lang); } catch (_) {}
+    _updateBrandHref();
   }
 
-  /* ---- permalink: copy URL + ?lang=XX to clipboard ---- */
+  /* ---- permalink: copy URL + ?lang=XX to clipboard, show toast ---- */
+  function _showToast(msg) {
+    var t = document.createElement('div');
+    t.textContent = msg;
+    t.style.cssText = (
+      'position:fixed;bottom:1.2rem;left:50%;transform:translateX(-50%);'
+      'background:#333;color:#fff;padding:.45rem 1rem;border-radius:4px;'
+      'font-size:.82rem;z-index:9999;pointer-events:none;'
+      'opacity:1;transition:opacity .4s'
+    );
+    document.body.appendChild(t);
+    setTimeout(function() { t.style.opacity = '0'; }, 1400);
+    setTimeout(function() { t.parentNode && t.parentNode.removeChild(t); }, 1900);
+  }
+
   window.copyPermalink = function () {
     var base = window.location.href.split('?')[0];
     var lang = document.documentElement.lang || 'de';
     var link = base + '?lang=' + lang;
+    var msg = lang === 'fr' ? 'Lien copié !' : 'Link kopiert!';
+    function done() { _showToast(msg); }
     function fallback() {
       var ta = document.createElement('textarea');
       ta.value = link; ta.style.cssText = 'position:fixed;opacity:0';
       document.body.appendChild(ta); ta.select();
       try { document.execCommand('copy'); } catch (_) {}
       document.body.removeChild(ta);
+      done();
     }
     if (navigator.clipboard) {
-      navigator.clipboard.writeText(link).catch(fallback);
+      navigator.clipboard.writeText(link).then(done).catch(fallback);
     } else { fallback(); }
   };
+
+  /* ---- keep brand link lang-aware so navigating back preserves language ---- */
+  function _updateBrandHref() {
+    var lang = document.documentElement.lang || 'de';
+    document.querySelectorAll('.site-brand').forEach(function (a) {
+      var href = a.getAttribute('href') || '';
+      a.href = href.split('?')[0] + '?lang=' + lang;
+    });
+  }
 
   /* ---- map radio toggle: switch between CDI1 / CDI2 iframes ---- */
   function initMapToggle() {
@@ -289,13 +319,44 @@ _JS = """\
     });
   }
 
-  /* ---- before print: notify active iframe so Leaflet can refit to A4 width ---- */
-  window.addEventListener('beforeprint', function () {
+  /* ---- helpers shared by exportBriefing() and beforeprint ---- */
+  function _getActiveMapLabel() {
+    var checked = document.querySelector('.map-radio-btn:checked');
+    if (!checked) return '';
+    var label = checked.closest('label');
+    if (!label) return '';
+    var lang = document.documentElement.lang || 'de';
+    var span = label.querySelector('.lang-' + lang);
+    return span ? span.textContent.trim() : '';
+  }
+  function _notifyActiveIframe() {
     var active = document.querySelector('.map-frame-active');
-    if (active) {
-      try { active.contentWindow.dispatchEvent(new Event('beforeprint')); } catch (e) {}
-      try { active.contentWindow.postMessage('drought:beforeprint', '*'); } catch (e) {}
-    }
+    if (!active) return;
+    try { active.contentWindow.dispatchEvent(new Event('beforeprint')); } catch (e) {}
+    try { active.contentWindow.postMessage('drought:beforeprint', '*'); } catch (e) {}
+  }
+  function _setMapPrintLabel() {
+    var el = document.getElementById('map-print-label');
+    if (el) el.textContent = _getActiveMapLabel();
+  }
+
+  /* ---- export button: notify iframe, wait for refit, then open print dialog ---- */
+  window.exportBriefing = function () {
+    _setMapPrintLabel();
+    _notifyActiveIframe();
+    /* 600 ms gives Leaflet time to invalidateSize + fitBounds before the snapshot */
+    setTimeout(window.print, 600);
+  };
+
+  /* ---- before print (Ctrl+P path): notify iframe and set label synchronously ---- */
+  window.addEventListener('beforeprint', function () {
+    _setMapPrintLabel();
+    _notifyActiveIframe();
+  });
+
+  window.addEventListener('afterprint', function () {
+    var el = document.getElementById('map-print-label');
+    if (el) el.textContent = '';
   });
 
   /* ---- canton recommendation textareas (no persistence — always start empty) ---- */
@@ -634,6 +695,7 @@ def _map_section_html(canton: CantonReport, has_maps: bool) -> str:
         f'<span class="lang-fr">Carte CDI {name_fr}</span>'
         f"</h2>"
         f"{map_body}"
+        f'<div id="map-print-label" class="map-print-label"></div>'
         f'<div class="lang-de">{legend_de}</div>'
         f'<div class="lang-fr">{legend_fr}</div>'
         f"</div>"
@@ -794,8 +856,8 @@ def _header_html(back_href: str) -> str:
       <span class="lang-fr">Bulletin s&eacute;cheresse</span>
     </a>
     <div class="header-actions">
-      <button class="action-btn lang-de" onclick="window.print()">&#11015; Export Briefing</button>
-      <button class="action-btn lang-fr" onclick="window.print()">&#11015; Exporter le briefing</button>
+      <button class="action-btn lang-de" onclick="exportBriefing()">&#11015; Export Briefing</button>
+      <button class="action-btn lang-fr" onclick="exportBriefing()">&#11015; Exporter le briefing</button>
       <button class="action-btn lang-de" onclick="copyPermalink()">&#128279; Link kopieren</button>
       <button class="action-btn lang-fr" onclick="copyPermalink()">&#128279; Copier le lien</button>
       <div class="lang-toggle">
