@@ -58,15 +58,31 @@ _WARNSTUFE_COLOURS: dict[int, tuple[str, str]] = {
     5: ("#8b0000", "#ffffff"),
 }
 
-# Legend colours for the CDI scale — aligned with the Warnstufe palette so the
-# legend is visually consistent with the rest of the site.
+# Legend colours for the CDI scale — matching the exact colours used by the
+# BAFU trockenheit.admin.ch WMS layer (extracted from the live map legend).
 _CDI_LEGEND_COLOURS: dict[int, str] = {
-    0: "#d4edda",  # no drought — pale green
-    1: "#6bbd50",  # slight     — wl-1 green
-    2: "#f7e84c",  # moderate   — wl-2 yellow
-    3: "#ff8c00",  # severe     — wl-3 orange
-    4: "#e02020",  # extreme    — wl-4 red
-    5: "#8b0000",  # exceptional— wl-5 dark red
+    1: "#97e8cb",  # rgb(151, 232, 203) — nicht trocken
+    2: "#f9e5ae",  # rgb(249, 229, 174) — leicht trocken
+    3: "#f1b981",  # rgb(241, 185, 129) — trocken
+    4: "#d18c47",  # rgb(209, 140, 71)  — sehr trocken
+    5: "#8a5a42",  # rgb(138, 90, 66)   — extrem trocken
+}
+
+# Short adjective labels that match the BAFU map legend (not the long noun form).
+# CDI 0 (no drought at all) is intentionally omitted — the map shows only 1-5.
+_CDI_LEGEND_LABELS: dict[int, str] = {
+    1: "Nicht trocken",
+    2: "Leicht trocken",
+    3: "Trocken",
+    4: "Sehr trocken",
+    5: "Extrem trocken",
+}
+_CDI_LEGEND_LABELS_FR: dict[int, str] = {
+    1: "Pas sec",
+    2: "Légèrement sec",
+    3: "Sec",
+    4: "Très sec",
+    5: "Extrêmement sec",
 }
 
 logging.basicConfig(level=logging.INFO, format="%(levelname)s %(message)s")
@@ -180,6 +196,7 @@ main{padding:2rem 0 3rem}
 /* Canton recommendation textarea */
 .canton-rec{width:100%;min-height:72px;resize:vertical;border:1px solid var(--border);border-radius:4px;padding:.35rem .45rem;font-family:inherit;font-size:.82rem;color:var(--text);background:var(--white)}
 .canton-rec:focus{outline:2px solid var(--blue);outline-offset:1px;border-color:var(--blue)}
+.canton-rec-print{display:none}
 
 /* Map card */
 .map-card{background:var(--white);border:1px solid var(--border);border-radius:6px;padding:1.25rem 1.5rem;margin-bottom:1.25rem;box-shadow:var(--shadow)}
@@ -201,12 +218,12 @@ main{padding:2rem 0 3rem}
   .site-header{position:static}
   .header-actions{display:none!important}
   .lang-toggle{display:none!important}
-  /* Interactive map iframes don't render correctly in print — use the static PNG instead */
-  .map-frame{display:none!important}
+  /* Show the first map iframe; hide radio controls (no interaction needed in print) */
+  .map-frame{display:block!important;height:260px}
   .map-controls{display:none!important}
-  .map-print-img{display:block!important;width:100%;max-height:320px;object-fit:contain;border:1px solid var(--border);border-radius:4px}
-  .map-print-note{display:block!important;text-align:center;color:var(--muted);font-style:italic;font-size:.88rem;padding:1rem;background:var(--bg);border-radius:4px}
-  .canton-rec{border:none!important;resize:none;background:transparent;min-height:unset}
+  /* Swap textarea for its sibling div so all text is visible (no scroll cutoff) */
+  .canton-rec{display:none!important}
+  .canton-rec-print{display:block!important;white-space:pre-wrap;word-break:break-word;font-size:.82rem;color:var(--text);padding:.35rem 0;min-height:1em}
   .card,.map-card{box-shadow:none;break-inside:avoid}
   .site-footer{display:none}
   .quality-bar{break-before:page}
@@ -214,10 +231,6 @@ main{padding:2rem 0 3rem}
   .lead-card,.badge-large,.wl,.wl-1,.wl-2,.wl-3,.wl-4,.wl-5,.cdi-swatch{
     -webkit-print-color-adjust:exact;print-color-adjust:exact
   }
-}
-@media screen{
-  .map-print-img{display:none!important}
-  .map-print-note{display:none!important}
 }
 """
 
@@ -268,13 +281,12 @@ _JS = """\
     });
   }
 
-  /* ---- canton recommendation textareas (localStorage per region) ---- */
+  /* ---- canton recommendation textareas (no persistence — always start empty) ---- */
   function initCantonRecs() {
     document.querySelectorAll('.canton-rec').forEach(function (ta) {
-      var key = 'cantonRec_' + ta.dataset.regionId;
-      try { ta.value = localStorage.getItem(key) || ''; } catch (_) {}
+      var printDiv = document.getElementById('canton-rec-print-' + ta.dataset.regionId);
       ta.addEventListener('input', function () {
-        try { localStorage.setItem(key, ta.value); } catch (_) {}
+        if (printDiv) printDiv.textContent = ta.value;
       });
     });
   }
@@ -485,8 +497,8 @@ def _station_details_html(r: RegionReport, locale: str) -> str:
 
 
 def _cdi_legend_html(locale: str) -> str:
-    """Horizontal CDI colour legend strip using site-aligned colours."""
-    labels = CDI_LABELS_FR if locale == "fr" else CDI_LABELS
+    """Horizontal CDI colour legend strip, CDI 1-5, matching the BAFU map palette."""
+    labels = _CDI_LEGEND_LABELS_FR if locale == "fr" else _CDI_LEGEND_LABELS
     title = _html.escape(t("map_legend_title", locale))
     items: list[str] = []
     for cdi_val, colour in sorted(_CDI_LEGEND_COLOURS.items()):
@@ -517,7 +529,7 @@ def _generate_map_files(canton: CantonReport, out_dir: Path) -> bool:
 
         for wms_time, filename in [("1", "map_cdi1.html"), ("2", "map_cdi2.html")]:
             m = build_map(canton_id=canton.canton_id, wms_time=wms_time)
-            html_str = m.get_root().render()
+            html_str = _inject_print_resize(m.get_root().render())
             (out_dir / filename).write_text(html_str, encoding="utf-8")
         return True
     except Exception as exc:
@@ -525,22 +537,26 @@ def _generate_map_files(canton: CantonReport, out_dir: Path) -> bool:
         return False
 
 
-def _generate_print_png(canton: CantonReport, out_dir: Path) -> bool:
-    """
-    Generate a static PNG of the CDI map for PDF export.
-    Requires network access + Pillow. Returns False on any error.
-    """
-    try:
-        from src.viz.maps import build_export_map
-        png_bytes = build_export_map(canton_id=canton.canton_id)
-        (out_dir / "map_print.png").write_bytes(png_bytes)
-        return True
-    except Exception as exc:
-        log.warning("Print PNG skipped for canton %d: %s", canton.canton_id, exc)
-        return False
+_LEAFLET_BEFOREPRINT_SCRIPT = (
+    "<script>"
+    "window.addEventListener('beforeprint',function(){"
+    # Leaflet map variables are named map_<hex> by Folium; call invalidateSize on all
+    "Object.keys(window).forEach(function(k){"
+    "if(k.startsWith('map_')&&window[k]&&typeof window[k].invalidateSize==='function'){"
+    "window[k].invalidateSize(true);"
+    "}"
+    "});"
+    "});"
+    "</script>"
+)
 
 
-def _map_section_html(canton: CantonReport, has_maps: bool, has_print_png: bool = False) -> str:
+def _inject_print_resize(html: str) -> str:
+    """Inject a beforeprint handler into a Folium HTML string so Leaflet recenters on print."""
+    return html.replace("</body>", _LEAFLET_BEFOREPRINT_SCRIPT + "</body>", 1)
+
+
+def _map_section_html(canton: CantonReport, has_maps: bool) -> str:
     """
     Bilingual map card with CDI/forecast radio toggle.
     Sits outside the lang-de/lang-fr divs so only two iframes are created total.
@@ -579,14 +595,6 @@ def _map_section_html(canton: CantonReport, has_maps: bool, has_print_png: bool 
     legend_de = _cdi_legend_html("de")
     legend_fr = _cdi_legend_html("fr")
 
-    if has_print_png:
-        print_el = '<img src="map_print.png" class="map-print-img" alt="CDI-Karte">'
-    else:
-        print_el = (
-            '<div class="map-print-note lang-de">Karte im Browser ansehen</div>'
-            '<div class="map-print-note lang-fr">Voir la carte dans le navigateur</div>'
-        )
-
     return (
         f'<div class="map-card">'
         f"<h2>"
@@ -594,7 +602,6 @@ def _map_section_html(canton: CantonReport, has_maps: bool, has_print_png: bool 
         f'<span class="lang-fr">Carte CDI {name_fr}</span>'
         f"</h2>"
         f"{map_body}"
-        f"{print_el}"
         f'<div class="lang-de">{legend_de}</div>'
         f'<div class="lang-fr">{legend_fr}</div>'
         f"</div>"
@@ -624,9 +631,11 @@ def _region_table_html(doc, canton: CantonReport, sec_title: str, locale: str) -
         situation = _station_details_html(r, locale)
         narrative = narratives.get(r.region_name_de, "–")
 
+        # Screen: editable textarea. Print: sibling div that mirrors the text (no scroll cutoff).
         rec_ta = (
             f'<textarea class="canton-rec" data-region-id="{r.region_id}"'
             f' placeholder="{placeholder}" rows="3"></textarea>'
+            f'<div class="canton-rec-print" id="canton-rec-print-{r.region_id}"></div>'
         )
 
         rows.append(
@@ -784,7 +793,6 @@ def _canton_page(
     doc_fr,
     ruleset,
     has_maps: bool = False,
-    has_print_png: bool = False,
     sources: list[dict] | None = None,
 ) -> str:
     """Generate a bilingual canton briefing page (single HTML, language-toggled by JS)."""
@@ -834,7 +842,7 @@ Bulletin s&eacute;cheresse {_html.escape(canton.canton_name_fr)}</title>
 
   {_banner_html(doc_de, doc_fr)}
 
-  {_map_section_html(canton, has_maps, has_print_png)}
+  {_map_section_html(canton, has_maps)}
 
   <div class="lang-de">
     {_sections_html(doc_de, canton, ruleset, "de")}
@@ -989,17 +997,16 @@ def generate_site(
         out_dir.mkdir(parents=True, exist_ok=True)
 
         has_maps = _generate_map_files(canton, out_dir)
-        has_print_png = _generate_print_png(canton, out_dir) if has_maps else False
 
         try:
             doc_de = render_briefing(canton, ruleset, locale="de")
             doc_fr = render_briefing(canton, ruleset, locale="fr")
             page_html = _canton_page(
                 canton, doc_de, doc_fr, ruleset,
-                has_maps=has_maps, has_print_png=has_print_png, sources=sources,
+                has_maps=has_maps, sources=sources,
             )
             (out_dir / "index.html").write_text(page_html, encoding="utf-8")
-            log.info("  canton/%s/index.html  (maps=%s print_png=%s)", abbrev, has_maps, has_print_png)
+            log.info("  canton/%s/index.html  (maps=%s)", abbrev, has_maps)
         except Exception as exc:
             log.error("Failed to render canton %s: %s", abbrev, exc)
             errors.append(path.name)
