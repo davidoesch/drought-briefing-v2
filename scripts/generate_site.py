@@ -258,12 +258,7 @@ _JS = """\
   function _showToast(msg) {
     var t = document.createElement('div');
     t.textContent = msg;
-    t.style.cssText = (
-      'position:fixed;bottom:1.2rem;left:50%;transform:translateX(-50%);'
-      'background:#333;color:#fff;padding:.45rem 1rem;border-radius:4px;'
-      'font-size:.82rem;z-index:9999;pointer-events:none;'
-      'opacity:1;transition:opacity .4s'
-    );
+    t.style.cssText = 'position:fixed;bottom:1.2rem;left:50%;transform:translateX(-50%);background:#333;color:#fff;padding:.45rem 1rem;border-radius:4px;font-size:.82rem;z-index:9999;pointer-events:none;opacity:1;transition:opacity .4s';
     document.body.appendChild(t);
     setTimeout(function() { t.style.opacity = '0'; }, 1400);
     setTimeout(function() { t.parentNode && t.parentNode.removeChild(t); }, 1900);
